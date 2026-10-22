@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Evento } from '../../engine/index.ts';
-import { sonsDosEventos } from '../ui/sons';
+import { sonsDosEventos } from '../sons';
 
 const carta = { valor: '3', naipe: 'ouros' } as const;
 
