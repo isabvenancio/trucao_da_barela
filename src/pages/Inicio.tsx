@@ -1,4 +1,7 @@
 import { Link } from 'react-router-dom';
+import { usePerfil } from '../ui/armazenamento.ts';
+import { Avatar } from '../ui/arte/avatares.tsx';
+import { Carta } from '../ui/arte/Carta.tsx';
 
 const opcoes = [
   { para: '/bots', titulo: 'Jogar contra bots', detalhe: 'Você e um bot contra dois bots' },
@@ -8,9 +11,23 @@ const opcoes = [
 ];
 
 export function Inicio() {
+  const [perfil] = usePerfil();
   return (
     <main className="pagina">
+      <div className="logo-bloco" aria-hidden="true">
+        <Carta carta={{ valor: '4', naipe: 'paus' }} manilha="4" tamanho="m" />
+        <Carta carta={{ valor: '3', naipe: 'copas' }} tamanho="m" />
+      </div>
       <h1 className="logo">Trucão da Barela</h1>
+
+      <Link to="/perfil" className="perfil-resumo" aria-label={`Editar perfil de ${perfil.apelido}`}>
+        <Avatar id={perfil.avatar} tamanho={48} />
+        <span>
+          <strong>{perfil.apelido}</strong>
+          <small>Editar perfil</small>
+        </span>
+      </Link>
+
       <nav className="menu" aria-label="Modos de jogo">
         {opcoes.map((o) => (
           <Link key={o.para} to={o.para} className="bloco-botao">
@@ -19,6 +36,10 @@ export function Inicio() {
           </Link>
         ))}
       </nav>
+
+      <Link to="/preferencias" className="link-discreto">
+        Preferências
+      </Link>
     </main>
   );
 }

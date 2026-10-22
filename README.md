@@ -16,10 +16,10 @@ Análise e Projeto de Software — Prof. Dr. João Choma — UEM/DIN
 
 | Documento | Conteúdo |
 |---|---|
-| [Plano de arquitetura e implementação](docs/00-plano-arquitetura-implementacao.md) | Stack, arquitetura, modelo de dados, API, sons e fases |
-| [Regras de negócio](docs/01-regras-de-negocio.md) | 26 regras (RN-001 a RN-026) |
-| [Requisitos](docs/02-requisitos.md) | 22 RF e 10 RNF |
-| [Casos de uso](docs/03-casos-de-uso.md) | 20 UCs com CA/CT, checklist e matriz de rastreabilidade |
+| [Plano de arquitetura e implementação](docs/plano-arquitetura-implementacao.md) | Stack, arquitetura, modelo de dados, API, sons e fases |
+| [Regras de negócio](docs/regras-de-negocio.md) | 26 regras (RN-001 a RN-026) |
+| [Requisitos](docs/requisitos.md) | 22 RF e 10 RNF |
+| [Casos de uso](docs/casos-de-uso.md) | 20 UCs com CA/CT, checklist e matriz de rastreabilidade |
 
 ## Como rodar
 

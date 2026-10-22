@@ -20,7 +20,7 @@ export default tseslint.config(
     rules: {
       'no-restricted-imports': [
         'error',
-        { patterns: ['react', 'react-*', 'zustand', '../ui/*', '../pages/*', '../online/*'] },
+        { patterns: ['react', 'react-*', '../ui/*', '../pages/*', '../online/*'] },
       ],
       'no-restricted-globals': ['error', 'window', 'document', 'fetch', 'localStorage'],
     },
