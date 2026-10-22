@@ -8,7 +8,7 @@ export default defineConfig({
     include: ['src/**/*.test.ts'],
     coverage: {
       provider: 'v8',
-      include: ['src/engine/**/*.ts', 'src/bots/**/*.ts'],
+      include: ['src/engine/**/*.ts', 'src/bots/**/*.ts', 'src/marcador/marcador.ts'],
       exclude: ['**/__tests__/**', '**/index.ts'],
       thresholds: { lines: 90 },
     },

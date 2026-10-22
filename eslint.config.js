@@ -15,8 +15,8 @@ export default tseslint.config(
     },
   },
   {
-    // RNF-008: o motor e os bots não podem depender de React, rede ou navegador.
-    files: ['src/engine/**/*.ts', 'src/bots/**/*.ts'],
+    // RNF-008: o motor, os bots e a lógica do marcador não podem depender de React, rede ou navegador.
+    files: ['src/engine/**/*.ts', 'src/bots/**/*.ts', 'src/marcador/marcador.ts'],
     rules: {
       'no-restricted-imports': [
         'error',

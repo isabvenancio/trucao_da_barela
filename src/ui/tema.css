@@ -1036,6 +1036,168 @@ a {
   font-size: 16px;
 }
 
+/* ---------------- Marcador ---------------- */
+
+.marcador__topo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.marcador__aviso {
+  padding: 10px 14px;
+  background: #3a2f12;
+  border: 3px solid var(--ouro);
+  color: var(--ouro);
+  text-align: center;
+}
+
+.marcador__aviso--ferro {
+  background: #2b2e33;
+  border-color: #9aa1aa;
+  color: var(--texto);
+}
+
+.marcador__duplas {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.marcador__dupla {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 10px;
+  background: var(--painel);
+  border: 4px solid var(--madeira-escura);
+  min-width: 0;
+}
+
+.marcador__dupla--0 {
+  border-top: 8px solid var(--nos);
+}
+
+.marcador__dupla--1 {
+  border-top: 8px solid var(--eles);
+}
+
+.marcador__dupla--venceu {
+  border-color: var(--ouro);
+  background: #3a2f12;
+}
+
+.marcador__nome {
+  font-size: 13px;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+
+.marcador__total {
+  font-family: var(--fonte-titulo);
+  font-size: clamp(40px, 12vw, 72px);
+  line-height: 1.1;
+  color: var(--ouro);
+  text-shadow: 4px 4px 0 var(--terra-escura);
+}
+
+.barra-pontos {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 2px;
+  width: 100%;
+}
+
+.barra-pontos__bloco {
+  aspect-ratio: 1;
+  background: #14110f;
+  border: 2px solid var(--pedra-escura);
+}
+
+.barra-pontos__bloco--onze {
+  border-color: var(--ouro-escuro);
+}
+
+.barra-pontos__bloco--cheio {
+  background: var(--grama-clara);
+  border-color: var(--grama-escura);
+}
+
+.marcador__botoes {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  width: 100%;
+}
+
+.botao--ponto {
+  --cor: var(--grama);
+  --sombra: var(--grama-escura);
+  --luz: var(--grama-clara);
+  font-size: 14px;
+  min-height: 52px;
+  padding: 6px 4px;
+}
+
+.botao:disabled {
+  filter: grayscale(1) brightness(0.6);
+  cursor: not-allowed;
+  transform: none;
+}
+
+.marcador__rodape {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.marcador__status {
+  min-height: 1.3em;
+  color: var(--texto-suave);
+}
+
+.historico-lista {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.historico-lista__item {
+  padding: 10px 14px;
+}
+
+.historico-lista__item summary {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 4px 12px;
+  min-height: var(--toque);
+  align-items: center;
+  cursor: pointer;
+}
+
+.historico-lista__data {
+  color: var(--texto-suave);
+}
+
+.historico-lista__vencedor {
+  color: var(--ouro);
+}
+
+.historico-lista__registros {
+  margin: 8px 0 0;
+  padding-left: 22px;
+  color: var(--texto-suave);
+  columns: 2;
+}
+
 /* ---------------- Celular ---------------- */
 
 @media (max-width: 560px) {
@@ -1110,6 +1272,14 @@ a {
 
   .placar__dupla strong {
     font-size: 16px;
+  }
+
+  .marcador__dupla {
+    padding: 10px 6px;
+  }
+
+  .botao--ponto {
+    font-size: 12px;
   }
 }
 

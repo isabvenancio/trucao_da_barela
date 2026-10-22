@@ -2,7 +2,9 @@ import { useEffect } from 'react';
 import { Route, Routes } from 'react-router-dom';
 import { ContraBots } from './pages/ContraBots.tsx';
 import { EmBreve } from './pages/EmBreve.tsx';
+import { HistoricoMarcador } from './pages/HistoricoMarcador.tsx';
 import { Inicio } from './pages/Inicio.tsx';
+import { Marcador } from './pages/Marcador.tsx';
 import { Perfil } from './pages/Perfil.tsx';
 import { Preferencias } from './pages/Preferencias.tsx';
 import { Regras } from './pages/Regras.tsx';
@@ -29,7 +31,8 @@ export function App() {
       <Route path="/preferencias" element={<Preferencias />} />
       <Route path="/regras" element={<Regras />} />
       <Route path="/sala/:codigo?" element={<EmBreve titulo="Sala online" fase={6} />} />
-      <Route path="/marcador" element={<EmBreve titulo="Marcador de pontos" fase={5} />} />
+      <Route path="/marcador/historico" element={<HistoricoMarcador />} />
+      <Route path="/marcador" element={<Marcador />} />
       <Route path="*" element={<EmBreve titulo="Página não encontrada" />} />
     </Routes>
   );

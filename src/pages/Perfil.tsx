@@ -2,7 +2,7 @@ import { useState } from 'react';
 import type { FormEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { usePerfil, validarApelido } from '../ui/armazenamento.ts';
-import { AVATARES, Avatar } from '../ui/arte/avatares';
+import { AVATARES, Avatar } from '../ui/arte/avatares.tsx';
 
 /** UC-001: configurar apelido e avatar. */
 export function Perfil() {
