@@ -1,0 +1,91 @@
+/* Paleta de blocos original do Trucão da Barela (RNF-010). Contraste AA verificado na fase 7. */
+:root {
+  --grama: #5b8c32;
+  --grama-escura: #3e6322;
+  --terra: #866043;
+  --terra-escura: #5c3f2b;
+  --madeira: #a8794d;
+  --pedra: #7d7d7d;
+  --ouro: #f2c94c;
+  --fundo: #1e1b18;
+  --texto: #f5efe6;
+  --texto-suave: #cfc4b4;
+  --fonte-titulo: 'Press Start 2P', monospace;
+  --fonte-texto: 'VT323', monospace;
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: var(--fundo);
+  color: var(--texto);
+  font-family: var(--fonte-texto);
+  font-size: 22px;
+  line-height: 1.4;
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--fonte-titulo);
+  font-weight: 400;
+  line-height: 1.5;
+}
+
+.pagina {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 32px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.logo {
+  font-size: clamp(20px, 5vw, 32px);
+  text-align: center;
+  color: var(--ouro);
+  text-shadow: 4px 4px 0 var(--terra-escura);
+}
+
+.menu {
+  display: grid;
+  gap: 16px;
+}
+
+.bloco-botao {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-height: 44px;
+  padding: 16px 20px;
+  background: var(--grama);
+  border: 4px solid var(--grama-escura);
+  box-shadow: inset -4px -4px 0 var(--grama-escura), inset 4px 4px 0 #78ad48;
+  color: var(--texto);
+  text-decoration: none;
+  image-rendering: pixelated;
+}
+
+.bloco-botao:hover {
+  background: #67a03a;
+}
+
+.bloco-botao:focus-visible {
+  outline: 4px solid var(--ouro);
+  outline-offset: 2px;
+}
+
+.bloco-botao__titulo {
+  font-family: var(--fonte-titulo);
+  font-size: 14px;
+}
+
+.bloco-botao__detalhe {
+  color: var(--texto-suave);
+}
