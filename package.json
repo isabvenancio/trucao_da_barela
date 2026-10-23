@@ -8,13 +8,15 @@
   },
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "npm run build:api && tsc -b && vite build",
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
     "coverage": "vitest run --coverage",
     "lint": "eslint .",
-    "typecheck": "tsc -b"
+    "typecheck": "tsc -b",
+    "build:api": "esbuild src/servidor/http.ts --bundle --platform=node --format=esm --target=node20 --outfile=api/_lib/servidor.mjs --banner:js=\"// Gerado por npm run build:api a partir de src/servidor. Não edite.\"",
+    "verificar:supabase": "node scripts/verificar-supabase.mjs"
   },
   "dependencies": {
     "react": "^18.3.1",
@@ -28,6 +30,7 @@
     "@types/react-dom": "^18.3.1",
     "@vitejs/plugin-react": "^4.3.3",
     "@vitest/coverage-v8": "^2.1.5",
+    "esbuild": "^0.28.0",
     "eslint": "^9.15.0",
     "eslint-plugin-react-hooks": "^5.0.0",
     "globals": "^15.12.0",

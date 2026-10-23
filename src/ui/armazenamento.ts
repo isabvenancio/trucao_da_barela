@@ -90,7 +90,11 @@ const EVENTO = 'trucao:armazenamento';
 export function useArmazenado<T extends object>(chave: string, padrao: () => T) {
   const [valor, setValor] = useState<T>(() => {
     const salvo = lerBruto<T>(chave);
-    return salvo ? { ...padrao(), ...salvo } : padrao();
+    if (salvo) return { ...padrao(), ...salvo };
+    // Primeira vez: grava o padrão para ele ficar estável entre telas e visitas.
+    const inicial = padrao();
+    gravar(chave, inicial);
+    return inicial;
   });
   const [persistiu, setPersistiu] = useState(true);
 
@@ -116,11 +120,7 @@ export function useArmazenado<T extends object>(chave: string, padrao: () => T) 
 }
 
 export function usePerfil() {
-  return useArmazenado<Perfil>(CHAVE_PERFIL, () => {
-    const p = perfilPadrao();
-    gravar(CHAVE_PERFIL, p);
-    return p;
-  });
+  return useArmazenado<Perfil>(CHAVE_PERFIL, perfilPadrao);
 }
 
 export function usePreferencias() {

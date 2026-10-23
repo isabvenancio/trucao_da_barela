@@ -1198,6 +1198,139 @@ a {
   columns: 2;
 }
 
+/* ---------------- Online ---------------- */
+
+.assento__status {
+  font-size: 14px;
+  color: var(--ouro);
+}
+
+.painel {
+  position: relative;
+}
+
+.painel__alerta {
+  color: var(--eles);
+  margin-bottom: 6px;
+}
+
+.prazo {
+  position: absolute;
+  top: 6px;
+  right: 10px;
+  font-family: var(--fonte-titulo);
+  font-size: 12px;
+  color: var(--texto-suave);
+}
+
+.prazo--acabando {
+  color: var(--eles);
+  animation: pulsar 0.5s steps(2) infinite;
+}
+
+.sala__codigo {
+  font-family: var(--fonte-titulo);
+  font-size: clamp(22px, 7vw, 36px);
+  letter-spacing: 4px;
+  color: var(--ouro);
+  text-align: center;
+}
+
+.lobby__duplas {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.lobby__dupla {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.lobby__dupla h2 {
+  font-size: 11px;
+  text-align: center;
+}
+
+.lobby__dupla--0 h2 {
+  color: var(--nos);
+}
+
+.lobby__dupla--1 h2 {
+  color: var(--eles);
+}
+
+.lugar {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 8px;
+  min-height: 150px;
+  background: var(--painel);
+  border: 3px solid var(--pedra-escura);
+  text-align: center;
+  min-width: 0;
+}
+
+.lugar--eu {
+  border-color: var(--ouro);
+}
+
+.lugar--vago {
+  border-style: dashed;
+  justify-content: center;
+}
+
+.lugar__nome {
+  overflow-wrap: anywhere;
+  line-height: 1.1;
+}
+
+.lugar__tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  justify-content: center;
+  font-size: 15px;
+}
+
+.tag {
+  padding: 1px 6px;
+  background: #3a332b;
+  border: 2px solid var(--pedra-escura);
+}
+
+.tag--ouro {
+  border-color: var(--ouro-escuro);
+  color: var(--ouro);
+}
+
+.lugar select {
+  font: inherit;
+  font-size: 18px;
+  min-height: var(--toque);
+  background: #14110f;
+  color: var(--texto);
+  border: 2px solid var(--pedra);
+  max-width: 100%;
+}
+
+.entrada__codigo input {
+  font-family: var(--fonte-titulo);
+  font-size: 18px;
+  letter-spacing: 4px;
+  text-transform: uppercase;
+}
+
+.conexao {
+  padding: 8px 12px;
+  background: var(--tijolo);
+  border: 3px solid var(--tijolo-escuro);
+  text-align: center;
+}
+
 /* ---------------- Celular ---------------- */
 
 @media (max-width: 560px) {

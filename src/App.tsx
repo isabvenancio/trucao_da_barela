@@ -8,6 +8,7 @@ import { Marcador } from './pages/Marcador.tsx';
 import { Perfil } from './pages/Perfil.tsx';
 import { Preferencias } from './pages/Preferencias.tsx';
 import { Regras } from './pages/Regras.tsx';
+import { SalaOnline } from './pages/SalaOnline.tsx';
 import { usePreferencias } from './ui/armazenamento.ts';
 import { carregarSons, configurarSom } from './ui/sons.ts';
 
@@ -30,7 +31,7 @@ export function App() {
       <Route path="/perfil" element={<Perfil />} />
       <Route path="/preferencias" element={<Preferencias />} />
       <Route path="/regras" element={<Regras />} />
-      <Route path="/sala/:codigo?" element={<EmBreve titulo="Sala online" fase={6} />} />
+      <Route path="/sala/:codigo?" element={<SalaOnline />} />
       <Route path="/marcador/historico" element={<HistoricoMarcador />} />
       <Route path="/marcador" element={<Marcador />} />
       <Route path="*" element={<EmBreve titulo="Página não encontrada" />} />

@@ -20,10 +20,16 @@ export interface PropsMesa {
   pausado: boolean;
   onAcao: (acao: Acao) => void;
   onSair: () => void;
+  /** Online: segundos até o prazo da sua decisão (RN-021). */
+  segundosRestantes?: number;
+  /** Online: aviso por assento, como "bot no lugar". */
+  statusAssento?: Partial<Record<Assento, string>>;
+  /** Online: aviso de conexão ou erro de ação. */
+  alerta?: string;
 }
 
 /** Mesa de jogo (RF-022): tudo a partir da visão do assento. */
-export function Mesa({ visao, anuncio, narracao, pausado, onAcao, onSair }: PropsMesa) {
+export function Mesa({ visao, anuncio, narracao, pausado, onAcao, onSair, segundosRestantes, statusAssento, alerta }: PropsMesa) {
   const [encobrir, setEncobrir] = useState(false);
   const meu = visao.assento;
   const minhaDupla = duplaDe(meu);
@@ -103,6 +109,7 @@ export function Mesa({ visao, anuncio, narracao, pausado, onAcao, onSair }: Prop
                     {parceiro ? 'Parceiro' : 'Adversário'}
                     {p.dificuldade ? ` · ${{ facil: 'fácil', medio: 'médio', dificil: 'difícil' }[p.dificuldade]}` : ''}
                   </span>
+                  {statusAssento?.[a] && <span className="assento__status">{statusAssento[a]}</span>}
                 </div>
                 <div className="assento__mao" aria-label={`${visao.quantidadeCartas[a]} cartas`}>
                   {Array.from({ length: visao.quantidadeCartas[a] }, (_, i) => (
@@ -140,6 +147,16 @@ export function Mesa({ visao, anuncio, narracao, pausado, onAcao, onSair }: Prop
 
       {/* Decisões pendentes do jogador */}
       <section className="painel" aria-label="Suas ações">
+        {alerta && (
+          <p className="painel__alerta" role="alert">
+            {alerta}
+          </p>
+        )}
+        {segundosRestantes !== undefined && minhaVez && (
+          <p className={`prazo ${segundosRestantes <= 5 ? 'prazo--acabando' : ''}`} aria-live={segundosRestantes <= 5 ? 'assertive' : 'off'}>
+            {segundosRestantes} s
+          </p>
+        )}
         {visao.pedido && respostas.length > 0 && (
           <div className="decisao" role="group" aria-label="Responder ao pedido">
             <p className="decisao__texto">
