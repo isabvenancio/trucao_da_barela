@@ -248,6 +248,31 @@ function embaralhar(itens, estado) {
   return { itens: copia, estado: s };
 }
 
+// src/engine/sinais.ts
+var SINAIS = ["zap", "copas", "espadilha", "picafumo", "tres", "dois", "as", "nada", "truca"];
+var MAX_SINAIS_POR_MAO = 3;
+function motivoSinalProibido(estado, assento, sinal) {
+  if (estado.fase === "encerrada") return "A partida j\xE1 terminou.";
+  const mao = estado.mao;
+  if (mao.resultado) return "A m\xE3o j\xE1 terminou.";
+  if (mao.tipo === "ferro") return "N\xE3o h\xE1 sinais na m\xE3o de ferro.";
+  if (mao.cartas[assento].length === 0) return "Voc\xEA n\xE3o tem mais cartas nesta m\xE3o.";
+  const meus = (mao.sinais ?? []).filter((s) => s.assento === assento);
+  if (meus.length >= MAX_SINAIS_POR_MAO) return `No m\xE1ximo ${MAX_SINAIS_POR_MAO} sinais por m\xE3o.`;
+  if (sinal !== void 0) {
+    if (!SINAIS.includes(sinal)) return "Sinal desconhecido.";
+    if (meus.some((s) => s.sinal === sinal)) return "Voc\xEA j\xE1 fez esse sinal nesta m\xE3o.";
+  }
+  return void 0;
+}
+function sinaisDisponiveis(estado, assento) {
+  if (motivoSinalProibido(estado, assento)) return [];
+  return SINAIS.filter((s) => !motivoSinalProibido(estado, assento, s));
+}
+function sinaisVisiveis(estado, assento) {
+  return (estado.mao.sinais ?? []).filter((s) => duplaDe(s.assento) === duplaDe(assento));
+}
+
 // src/engine/partida.ts
 var PONTOS_PARA_VENCER = 12;
 function criarPartida(opcoes) {
@@ -344,6 +369,11 @@ function aplicarAcao(anterior, acao) {
     case "DECIDIR_MAO_DE_ONZE":
       falha = decidirOnze(estado, acao.assento, acao.decisao, eventos);
       break;
+    case "SINALIZAR":
+      falha = sinalizar(estado, acao.assento, acao.sinal, eventos);
+      break;
+    default:
+      return erro("CARTA_INVALIDA", "A\xE7\xE3o desconhecida.");
   }
   if (falha) return falha;
   estado.versao += 1;
@@ -441,6 +471,14 @@ function decidirOnze(estado, assento, decisao, eventos) {
   if (decisao === "correr") encerrarMao(estado, outraDupla(pendente.dupla), 1, "correu-onze", eventos);
   return void 0;
 }
+function sinalizar(estado, assento, sinal, eventos) {
+  const motivo = motivoSinalProibido(estado, assento, sinal);
+  if (motivo) return erro("SINAL_PROIBIDO", motivo);
+  const mao = estado.mao;
+  mao.sinais = [...mao.sinais ?? [], { assento, sinal, rodada: mao.rodadas.length }];
+  eventos.push({ tipo: "SINAL_ENVIADO", assento, sinal });
+  return void 0;
+}
 function acoesValidas(estado, assento) {
   if (estado.fase === "encerrada") return [];
   const mao = estado.mao;
@@ -512,6 +550,9 @@ function visaoDoAssento(estado, assento) {
     vez: mao.vez,
     aguardando: assentoDaVez(estado),
     acoes: acoesValidas(estado, assento),
+    sinaisDoParceiro: sinaisVisiveis(estado, assento).filter((s) => s.assento !== assento).map((s) => ({ ...s })),
+    meusSinais: sinaisVisiveis(estado, assento).filter((s) => s.assento === assento).map((s) => s.sinal),
+    sinaisDisponiveis: sinaisDisponiveis(estado, assento),
     versao: estado.versao
   };
   if (estado.vencedora !== void 0) visao.vencedora = estado.vencedora;
@@ -521,7 +562,7 @@ function visaoDoAssento(estado, assento) {
   return visao;
 }
 function eventosParaAssento(eventos, assento) {
-  return eventos.map((e) => {
+  return eventos.filter((e) => e.tipo !== "SINAL_ENVIADO" || duplaDe(e.assento) === duplaDe(assento)).map((e) => {
     if (e.tipo === "CARTA_JOGADA" && e.encoberta && e.assento !== assento) {
       return { ...e, carta: null, manilha: false, zap: false };
     }
@@ -596,6 +637,37 @@ function probabilidadeImbativel(carta, visao) {
 function adversarioVenceSeCorrermos(visao) {
   return visao.placar[outraDupla(visao.dupla)] + visao.valorMao >= 12;
 }
+var NAIPE_DO_SINAL = { zap: "paus", copas: "copas", espadilha: "espadas", picafumo: "ouros" };
+var VALOR_DO_SINAL = { tres: "3", dois: "2", as: "A" };
+function cartaDoSinal(sinal, visao) {
+  const naipe = NAIPE_DO_SINAL[sinal];
+  if (naipe) return { valor: visao.manilha, naipe };
+  const valor = VALOR_DO_SINAL[sinal];
+  return valor && valor !== visao.manilha ? { valor } : void 0;
+}
+function forcaSinalizadaDoParceiro(visao) {
+  const parceiro = parceiroDe(visao.assento);
+  const jogadas = visao.rodadas.flatMap((r) => r.jogadas).filter((j) => j.assento === parceiro);
+  let melhor;
+  for (const { sinal } of visao.sinaisDoParceiro) {
+    if (sinal === "nada") {
+      melhor ??= -1;
+      continue;
+    }
+    const c = cartaDoSinal(sinal, visao);
+    if (!c) continue;
+    const jogou = jogadas.some((j) => j.carta && j.carta.valor === c.valor && (c.naipe === void 0 || j.carta.naipe === c.naipe));
+    if (jogou) continue;
+    const f = c.naipe ? 100 + ["ouros", "espadas", "copas", "paus"].indexOf(c.naipe) : ORDEM_VALORES.indexOf(c.valor);
+    melhor = Math.max(melhor ?? -1, forcaNormalizada(f));
+  }
+  return melhor;
+}
+function parceiroAindaJoga(visao) {
+  const rodada = visao.rodadas[visao.rodadas.length - 1];
+  const parceiro = parceiroDe(visao.assento);
+  return !!rodada && !rodada.jogadas.some((j) => j.assento === parceiro) && visao.quantidadeCartas[parceiro] > 0;
+}
 
 // src/bots/estrategias.ts
 function sortear(itens, aleatorio) {
@@ -622,6 +694,8 @@ function escolherCarta(visao, aleatorio) {
     const cobre = cartas.find((c) => c.forca > s.maior);
     return cobre && cobre.forca < 100 ? jogar(visao, cobre) : descartar();
   }
+  const sinalizada = forcaSinalizadaDoParceiro(visao) ?? 0;
+  if (parceiroAindaJoga(visao) && sinalizada >= 0.95 && s.maior < 100) return descartar();
   const vence = cartas.find((c) => c.forca > s.maior);
   if (vence) return jogar(visao, vence);
   const empata = cartas.find((c) => c.forca === s.maior && c.forca < 100);
@@ -631,7 +705,8 @@ function escolherCarta(visao, aleatorio) {
 function equidadeMedio(visao) {
   const cartas = minhasCartas(visao).map((c) => forcaNormalizada(c.forca)).sort((a, b) => b - a);
   const s = situacaoDaRodada(visao);
-  const e = 0.45 * (cartas[0] ?? 0) + 0.3 * (cartas[1] ?? 0) + 0.25 * (s.vitorias - s.derrotas) + (s.parceiroGanhando ? 0.15 : 0) - (s.adversarioGanhando ? 0.1 : 0);
+  const sinal = forcaSinalizadaDoParceiro(visao);
+  const e = (sinal === void 0 ? 0 : sinal < 0 ? -0.05 : 0.2 * sinal) + 0.45 * (cartas[0] ?? 0) + 0.3 * (cartas[1] ?? 0) + 0.25 * (s.vitorias - s.derrotas) + (s.parceiroGanhando ? 0.15 : 0) - (s.adversarioGanhando ? 0.1 : 0);
   return Math.max(0, Math.min(1, e));
 }
 function equidadeDificil(visao) {
@@ -639,7 +714,9 @@ function equidadeDificil(visao) {
   const p1 = probs[0] ?? 0;
   const p2 = probs[1] ?? 0;
   const s = situacaoDaRodada(visao);
-  const parceiro = s.parceiroGanhando ? 0.2 : 0.1;
+  const sinal = forcaSinalizadaDoParceiro(visao);
+  const base = s.parceiroGanhando ? 0.2 : 0.1;
+  const parceiro = sinal === void 0 ? base : sinal < 0 ? 0.05 : Math.max(base, sinal * 0.4);
   let e;
   if (s.vitorias > s.derrotas) e = 1 - (1 - p1) * (1 - parceiro);
   else if (s.derrotas > s.vitorias) e = p1 * Math.max(p2, parceiro);
@@ -696,6 +773,42 @@ function estrategica(visao, nivel, aleatorio) {
 }
 function estrategia(visao, nivel, aleatorio) {
   return nivel === "facil" ? facil(visao, aleatorio) : estrategica(visao, nivel, aleatorio);
+}
+
+// src/bots/sinais.ts
+var SINAL_DA_MANILHA = { paus: "zap", copas: "copas", espadas: "espadilha", ouros: "picafumo" };
+var SINAL_COMUM = { "3": "tres", "2": "dois", A: "as" };
+function sinalDaCarta(carta, manilha) {
+  return ehManilha(carta, manilha) ? SINAL_DA_MANILHA[carta.naipe] : SINAL_COMUM[carta.valor];
+}
+function sinaisDoBot(visao, nivel, aleatorio) {
+  if (visao.meusSinais.length > 0 || visao.sinaisDisponiveis.length === 0) return [];
+  if (visao.cartasParceiro) return [];
+  if (nivel === "facil" && aleatorio() < 0.5) return [];
+  const cartas = visao.minhasCartas.filter((c) => c !== null);
+  const sinais = cartas.sort((a, b) => forca(b, visao.manilha) - forca(a, visao.manilha)).map((c) => sinalDaCarta(c, visao.manilha)).filter((s) => s !== void 0);
+  const escolhidos = [...new Set(sinais)].slice(0, 2);
+  const lista = escolhidos.length ? escolhidos : ["nada"];
+  return lista.filter((s) => visao.sinaisDisponiveis.includes(s));
+}
+function aplicarSinaisDosBots(estado, nivelDoBot, aleatorio = Math.random) {
+  let atual = estado;
+  const eventos = [];
+  for (const assento of [0, 1, 2, 3]) {
+    const nivel = nivelDoBot(assento);
+    if (!nivel) continue;
+    for (const sinal of sinaisDoBot(visaoDoAssento(atual, assento), nivel, aleatorio)) {
+      const r = aplicarAcao(atual, { tipo: "SINALIZAR", assento, sinal });
+      if (r.ok) {
+        atual = r.estado;
+        eventos.push(...r.eventos);
+      }
+    }
+  }
+  return { estado: atual, eventos };
+}
+function comecouMao(eventos) {
+  return eventos.some((e) => e.tipo === "MAO_DISTRIBUIDA" || e.tipo === "ONZE_DECIDIDA");
 }
 
 // src/bots/index.ts
@@ -967,6 +1080,14 @@ function registrarLote(sala, eventos) {
   sala.lotes = [...sala.lotes, { versao: sala.versao + 1, eventos }].slice(-MAX_LOTES);
 }
 function depoisDaAcao(sala, anterior, novo, eventos, agora) {
+  if (comecouMao(eventos) && novo.fase === "jogando") {
+    const s = aplicarSinaisDosBots(novo, (a) => {
+      const o = sala.assentos[a];
+      return o?.tipo === "bot" ? o.dificuldade ?? "medio" : void 0;
+    });
+    novo = s.estado;
+    eventos = [...eventos, ...s.eventos];
+  }
   sala.partida = novo;
   registrarLote(sala, eventos);
   sala.expiraEm = mais2(agora, HORAS_INATIVIDADE * 36e5);
@@ -1026,6 +1147,11 @@ function acaoHumana(sala, meu, acao, agora) {
   const anterior = sala.partida;
   const r = aplicarAcao(anterior, { ...acao, assento: meu });
   if (!r.ok) throw new ErroServidor("REGRA", r.erro.mensagem, 422);
+  if (acao.tipo === "SINALIZAR") {
+    sala.partida = r.estado;
+    registrarLote(sala, r.eventos);
+    return;
+  }
   depoisDaAcao(sala, anterior, r.estado, r.eventos, agora);
 }
 function avancar(sala, agora, aleatorio = Math.random) {

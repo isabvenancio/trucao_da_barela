@@ -332,6 +332,40 @@ describe('UC-016 - Revanche', () => {
   });
 });
 
+describe('RN-027 - Sinais no online (CT-024.1)', () => {
+  it('o parceiro recebe o sinal; os adversários não recebem sinal nem evento; o prazo não muda', async () => {
+    const m = montar();
+    const barela = await m.s.criarSala(BARELA);
+    const carol = await m.s.entrar(barela.codigo, CAROL);
+    // Carol vira parceira (assento 2); bots nos assentos 1 e 3.
+    await m.s.operar(barela.codigo, carol.token, { tipo: 'mover', para: 2 });
+    await m.s.operar(barela.codigo, barela.token, { tipo: 'adicionarBot', assento: 1, dificuldade: 'medio' });
+    await m.s.operar(barela.codigo, barela.token, { tipo: 'adicionarBot', assento: 3, dificuldade: 'medio' });
+    await m.s.iniciar(barela.codigo, barela.token);
+    const antes = await m.sala(barela.codigo);
+    // Os bots (1 e 3) já sinalizaram um para o outro no início da mão.
+    expect(antes.partida!.mao.sinais!.some((x) => x.assento === 1)).toBe(true);
+    const desde = antes.versao;
+    await m.s.acao(barela.codigo, barela.token, { tipo: 'SINALIZAR', assento: 0, sinal: 'nada' });
+    const depois = await m.sala(barela.codigo);
+    expect(depois.prazo).toBe(antes.prazo);
+    expect(depois.proximoBotEm).toBe(antes.proximoBotEm);
+    const rCarol = await m.s.estado(carol.codigo, carol.token, desde);
+    expect(rCarol.visao!.sinaisDoParceiro.map((x) => x.sinal)).toEqual(['nada']);
+    expect(rCarol.lotes.flatMap((l) => l.eventos).some((e) => e.tipo === 'SINAL_ENVIADO' && e.assento === 0)).toBe(true);
+    // Carol (dupla 0) não vê os sinais dos bots da dupla 1.
+    const rInicio = await m.s.estado(carol.codigo, carol.token, -1);
+    expect(rInicio.lotes.flatMap((l) => l.eventos).some((e) => e.tipo === 'SINAL_ENVIADO' && e.assento % 2 === 1)).toBe(false);
+    expect(JSON.stringify(rInicio.visao!.sinaisDoParceiro).includes('"assento":1')).toBe(false);
+  });
+
+  it('sinal inválido é recusado pelo servidor', async () => {
+    const m = await partidaComDoisHumanos();
+    await m.s.acao(m.barela.codigo, m.barela.token, { tipo: 'SINALIZAR', assento: 0, sinal: 'zap' });
+    expect(await erroDe(m.s.acao(m.barela.codigo, m.barela.token, { tipo: 'SINALIZAR', assento: 0, sinal: 'zap' }))).toBe('REGRA');
+  });
+});
+
 describe('Concorrência (RNF-001)', () => {
   it('consultas e ações simultâneas não perdem gravações', async () => {
     const m = await partidaComDoisHumanos();

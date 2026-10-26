@@ -8,10 +8,36 @@ export const SLOTS = [
   'distribuir', 'jogar', 'encoberta', 'suaVez', 'tempoAcabando', 'manilha', 'zap',
   'truco', 'seis', 'nove', 'doze', 'aceitar', 'correr',
   'ganharRodada', 'ganharMao', 'maoDeOnze', 'maoDeFerro', 'vitoria', 'derrota',
-  'entrouSala', 'saiuSala',
+  'entrouSala', 'saiuSala', 'sinal',
 ] as const;
 
 export type Slot = (typeof SLOTS)[number];
+
+/** Nome de cada slot para a tela de teste de sons. */
+export const NOMES_SLOTS: Record<Slot, string> = {
+  distribuir: 'Distribuir cartas',
+  jogar: 'Jogar carta',
+  encoberta: 'Carta encoberta',
+  suaVez: 'Sua vez',
+  tempoAcabando: 'Tempo acabando',
+  manilha: 'Manilha na mesa',
+  zap: 'Zap',
+  truco: 'Truco!',
+  seis: 'Seis!',
+  nove: 'Nove!',
+  doze: 'Doze!!!',
+  aceitar: 'Aceitar',
+  correr: 'Correr',
+  ganharRodada: 'Ganhar rodada',
+  ganharMao: 'Ganhar a mão',
+  maoDeOnze: 'Mão de onze',
+  maoDeFerro: 'Mão de ferro',
+  vitoria: 'Vencer a partida',
+  derrota: 'Perder a partida',
+  entrouSala: 'Alguém entrou na sala',
+  saiuSala: 'Alguém saiu da sala',
+  sinal: 'Sinal do parceiro',
+};
 
 type Manifesto = Partial<Record<Slot, string | null>>;
 
@@ -51,6 +77,11 @@ export function carregarSons(base = '/sons/'): Promise<void> {
   return carregando;
 }
 
+/** De onde vem cada som: arquivo do manifesto ou reserva sintetizada (com o nome do arquivo, se houver). */
+export function origemDosSons(): Record<Slot, string | null> {
+  return Object.fromEntries(SLOTS.map((s) => [s, arquivos.get(s)?.src.split('/').pop() ?? null])) as Record<Slot, string | null>;
+}
+
 export function tocar(slot: Slot): void {
   if (!ligado || volume === 0) return;
   const arquivo = arquivos.get(slot);
@@ -63,8 +94,8 @@ export function tocar(slot: Slot): void {
   sintetizar(slot);
 }
 
-/** Converte os eventos do motor nos sons a tocar, do ponto de vista de `minhaDupla`. */
-export function sonsDosEventos(eventos: readonly Evento[], minhaDupla: Dupla): Slot[] {
+/** Converte os eventos do motor nos sons a tocar, do ponto de vista de `minhaDupla` (e do assento, para os sinais). */
+export function sonsDosEventos(eventos: readonly Evento[], minhaDupla: Dupla, meuAssento?: number): Slot[] {
   const sons: Slot[] = [];
   for (const e of eventos) {
     switch (e.tipo) {
@@ -91,6 +122,9 @@ export function sonsDosEventos(eventos: readonly Evento[], minhaDupla: Dupla): S
         break;
       case 'PARTIDA_ENCERRADA':
         sons.push(e.vencedora === minhaDupla ? 'vitoria' : 'derrota');
+        break;
+      case 'SINAL_ENVIADO':
+        if (e.assento !== meuAssento) sons.push('sinal');
         break;
     }
   }
@@ -173,6 +207,7 @@ const SINTESE: Record<Slot, (t: number) => void> = {
   derrota: (t) => { [392, 370, 349, 330].forEach((f, i) => osc(t + i * 0.28, 'square', f, f, 0.26, 0.28)); osc(t + 1.12, 'triangle', 262, 98, 0.8, 0.4); },
   entrouSala: (t) => osc(t, 'square', 440, 880, 0.12, 0.3),
   saiuSala: (t) => osc(t, 'square', 880, 440, 0.12, 0.3),
+  sinal: (t) => { ruido(t, 0.08, 0.25, 'highpass', 4000); osc(t + 0.05, 'triangle', 1568, 1568, 0.05, 0.25); osc(t + 0.12, 'triangle', 2093, 2093, 0.07, 0.22); },
 };
 
 function sintetizar(slot: Slot): void {

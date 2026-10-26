@@ -1,6 +1,7 @@
 import { aplicarAcao, assentoDaVez, criarPartida, visaoDoAssento } from '../engine/index.ts';
 import type { Dificuldade, Dupla, EstadoPartida } from '../engine/index.ts';
 import { decidirBot } from './index.ts';
+import { aplicarSinaisDosBots, comecouMao } from './sinais.ts';
 
 /** Gerador reproduzível (mulberry32) para simulações. */
 export function criarAleatorio(semente: number): () => number {
@@ -22,6 +23,11 @@ export interface ResultadoSimulacao {
   maiorTempoDecisaoMs: number;
 }
 
+export interface OpcoesSimulacao {
+  /** Quais duplas trocam sinais (RN-027). Padrão: as duas. */
+  sinais?: [boolean, boolean];
+}
+
 /**
  * Joga partidas inteiras bot × bot (fase 3 do plano). `niveis[i]` é o nível do assento i;
  * dupla 0 = assentos 0 e 2, dupla 1 = assentos 1 e 3.
@@ -30,7 +36,9 @@ export function simular(
   niveis: [Dificuldade, Dificuldade, Dificuldade, Dificuldade],
   partidas: number,
   semente = 1,
+  opcoes: OpcoesSimulacao = {},
 ): ResultadoSimulacao {
+  const comSinais = opcoes.sinais ?? [true, true];
   const resultado: ResultadoSimulacao = {
     partidas,
     vitorias: [0, 0],
@@ -48,7 +56,9 @@ export function simular(
       tipo: 'bot' as const,
       dificuldade,
     })) as EstadoPartida['participantes'];
-    let estado = criarPartida({ participantes, semente: semente * 100_003 + p }).estado;
+    const sinalizar = (e: EstadoPartida) =>
+      aplicarSinaisDosBots(e, (a) => (comSinais[(a % 2) as Dupla] ? niveis[a] : undefined), aleatorio).estado;
+    let estado = sinalizar(criarPartida({ participantes, semente: semente * 100_003 + p }).estado);
     let passos = 0;
 
     while (estado.fase === 'jogando') {
@@ -63,7 +73,7 @@ export function simular(
         break;
       }
       resultado.maos += r.eventos.filter((e) => e.tipo === 'MAO_ENCERRADA').length;
-      estado = r.estado;
+      estado = comecouMao(r.eventos) ? sinalizar(r.estado) : r.estado;
       if (++passos > 10_000) throw new Error('Partida simulada não terminou');
     }
     if (estado.vencedora !== undefined) resultado.vitorias[estado.vencedora as Dupla]++;

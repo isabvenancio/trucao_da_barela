@@ -2,6 +2,7 @@ import { criarBaralho, ehManilha, ehZap, manilhaDaVira } from './baralho.ts';
 import { duplaDe, ordemAPartirDe, outraDupla, proximoAssento } from './mesa.ts';
 import { embaralhar, inteiro } from './rng.ts';
 import { inicianteDaProxima, resultadoDaRodada, vencedorDaMao } from './rodada.ts';
+import { motivoSinalProibido } from './sinais.ts';
 import { motivoTrucoProibido, proximoValorPedido, respondenteDe } from './truco.ts';
 import type {
   Acao,
@@ -15,6 +16,7 @@ import type {
   MotivoFimMao,
   Participante,
   Resultado,
+  Sinal,
   TipoMao,
 } from './tipos.ts';
 
@@ -155,6 +157,11 @@ export function aplicarAcao(anterior: EstadoPartida, acao: Acao): Resultado {
     case 'DECIDIR_MAO_DE_ONZE':
       falha = decidirOnze(estado, acao.assento, acao.decisao, eventos);
       break;
+    case 'SINALIZAR':
+      falha = sinalizar(estado, acao.assento, acao.sinal, eventos);
+      break;
+    default:
+      return erro('CARTA_INVALIDA', 'Ação desconhecida.');
   }
   if (falha) return falha;
   estado.versao += 1;
@@ -287,7 +294,17 @@ function decidirOnze(
   return undefined;
 }
 
-/** Ações que o assento pode realizar agora — usado pela interface e pelos bots (RF-021, RF-022). */
+/** RN-027: o sinal só fica registrado; não muda a vez nem o valor da mão. */
+function sinalizar(estado: EstadoPartida, assento: Assento, sinal: Sinal, eventos: Evento[]): Resultado | undefined {
+  const motivo = motivoSinalProibido(estado, assento, sinal);
+  if (motivo) return erro('SINAL_PROIBIDO', motivo);
+  const mao = estado.mao;
+  mao.sinais = [...(mao.sinais ?? []), { assento, sinal, rodada: mao.rodadas.length }];
+  eventos.push({ tipo: 'SINAL_ENVIADO', assento, sinal });
+  return undefined;
+}
+
+/** Ações de jogo que o assento pode realizar agora — usado pela interface e pelos bots (RF-021, RF-022). Sinais ficam de fora: veja `sinaisDisponiveis`. */
 export function acoesValidas(estado: EstadoPartida, assento: Assento): Acao[] {
   if (estado.fase === 'encerrada') return [];
   const mao = estado.mao;

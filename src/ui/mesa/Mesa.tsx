@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { duplaDe, nomeCarta, proximoValorPedido } from '../../engine/index.ts';
-import type { Acao, Assento, VisaoMesa } from '../../engine/index.ts';
+import type { Acao, Assento, Sinal, VisaoMesa } from '../../engine/index.ts';
 import { Avatar } from '../arte/avatares.tsx';
 import { Carta } from '../arte/Carta.tsx';
+import { RostoSinal, SINAIS_INFO } from '../arte/sinais.tsx';
 import type { Anuncio } from './usePartidaContraBots.ts';
 import { NOME_PEDIDO, nomeDupla } from './narracao.ts';
 
@@ -41,6 +42,31 @@ export function Mesa({ visao, anuncio, narracao, pausado, onAcao, onSair, segund
   const respostas = visao.acoes.filter((a) => a.tipo === 'RESPONDER_TRUCO');
   const decisaoOnze = visao.acoes.filter((a) => a.tipo === 'DECIDIR_MAO_DE_ONZE');
   const minhaVez = visao.aguardando === meu && !pausado;
+
+  // RN-027: painel de sinais e balão do último sinal recebido do parceiro.
+  const [abrirSinais, setAbrirSinais] = useState(false);
+  const [balao, setBalao] = useState<{ sinal: Sinal; id: number } | null>(null);
+  const recebidos = visao.sinaisDoParceiro.length;
+  const ultimoVisto = useRef('');
+  useEffect(() => {
+    // Cada sinal novo (por mão) mostra o balão uma vez, inclusive os feitos antes da mesa aparecer.
+    const chave = `${visao.numeroMao}-${recebidos}`;
+    if (recebidos === 0 || chave === ultimoVisto.current) return;
+    ultimoVisto.current = chave;
+    const sinal = visao.sinaisDoParceiro[recebidos - 1]!.sinal;
+    const id = Date.now();
+    setBalao({ sinal, id });
+    const t = window.setTimeout(() => setBalao((b) => (b?.id === id ? null : b)), 3500);
+    return () => window.clearTimeout(t);
+  }, [recebidos, visao.numeroMao, visao.sinaisDoParceiro]);
+  const podeSinalizar = visao.sinaisDisponiveis.length > 0 && !pausado;
+  useEffect(() => {
+    if (!podeSinalizar) setAbrirSinais(false);
+  }, [podeSinalizar]);
+  const sinalizar = (sinal: Sinal) => {
+    setAbrirSinais(false);
+    onAcao({ tipo: 'SINALIZAR', assento: meu, sinal });
+  };
   const nome = (a: Assento) => (a === meu ? 'Você' : visao.participantes[a]!.nome);
 
   const jogar = (indice: number) => {
@@ -111,6 +137,25 @@ export function Mesa({ visao, anuncio, narracao, pausado, onAcao, onSair, segund
                   </span>
                   {statusAssento?.[a] && <span className="assento__status">{statusAssento[a]}</span>}
                 </div>
+                {parceiro && visao.sinaisDoParceiro.length > 0 && (
+                  <div className="assento__sinais" aria-label={`Sinais do parceiro: ${visao.sinaisDoParceiro.map((x) => SINAIS_INFO[x.sinal].nome).join(', ')}`}>
+                    {visao.sinaisDoParceiro.map((x) => (
+                      <span key={x.sinal} className="assento__sinal" title={`${SINAIS_INFO[x.sinal].nome}: ${SINAIS_INFO[x.sinal].significado.toLowerCase()}`}>
+                        <RostoSinal sinal={x.sinal} tamanho={18} />
+                        {SINAIS_INFO[x.sinal].nome}
+                      </span>
+                    ))}
+                  </div>
+                )}
+                {parceiro && balao && (
+                  <div key={balao.id} className="balao-sinal" aria-hidden="true">
+                    <RostoSinal sinal={balao.sinal} tamanho={40} />
+                    <span>
+                      <strong>{SINAIS_INFO[balao.sinal].nome}</strong>
+                      <small>{SINAIS_INFO[balao.sinal].gesto}</small>
+                    </span>
+                  </div>
+                )}
                 <div className="assento__mao" aria-label={`${visao.quantidadeCartas[a]} cartas`}>
                   {Array.from({ length: visao.quantidadeCartas[a] }, (_, i) => (
                     <Carta key={i} carta={null} verso tamanho="p" />
@@ -225,6 +270,43 @@ export function Mesa({ visao, anuncio, narracao, pausado, onAcao, onSair, segund
                 </button>
               )}
             </div>
+          </div>
+        )}
+
+        {visao.tipoMao !== 'ferro' && (
+          <div className="painel__sinais">
+            <button
+              type="button"
+              className={`botao botao--pequeno botao--sinais ${abrirSinais ? 'botao--sinais-aberto' : ''}`}
+              onClick={() => setAbrirSinais((x) => !x)}
+              disabled={!podeSinalizar}
+              aria-expanded={abrirSinais}
+              aria-controls="lista-sinais"
+            >
+              Sinais ({visao.sinaisDisponiveis.length > 0 ? 3 - visao.meusSinais.length : 0})
+            </button>
+            {visao.meusSinais.length > 0 && (
+              <span className="painel__meus-sinais" aria-label={`Você sinalizou: ${visao.meusSinais.map((x) => SINAIS_INFO[x].nome).join(', ')}`}>
+                Você fez:
+                {visao.meusSinais.map((x) => (
+                  <span key={x} className="assento__sinal">
+                    <RostoSinal sinal={x} tamanho={18} />
+                    {SINAIS_INFO[x].nome}
+                  </span>
+                ))}
+              </span>
+            )}
+          </div>
+        )}
+        {abrirSinais && (
+          <div id="lista-sinais" className="lista-sinais" role="group" aria-label="Escolha um sinal para o parceiro">
+            {visao.sinaisDisponiveis.map((x) => (
+              <button key={x} type="button" className="lista-sinais__item" onClick={() => sinalizar(x)}>
+                <RostoSinal sinal={x} tamanho={36} />
+                <span className="lista-sinais__nome">{SINAIS_INFO[x].nome}</span>
+                <span className="lista-sinais__gesto">{SINAIS_INFO[x].gesto}</span>
+              </button>
+            ))}
           </div>
         )}
       </section>

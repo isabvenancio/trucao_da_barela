@@ -1,5 +1,5 @@
-import { criarBaralho, duplaDe, forca, mesmaCarta, nomeCarta, outraDupla } from '../engine/index.ts';
-import type { Assento, Carta, Dupla, ResultadoRodada, VisaoMesa } from '../engine/index.ts';
+import { criarBaralho, duplaDe, forca, mesmaCarta, nomeCarta, outraDupla, parceiroDe, ORDEM_VALORES } from '../engine/index.ts';
+import type { Assento, Carta, Dupla, ResultadoRodada, Sinal, VisaoMesa } from '../engine/index.ts';
 
 /** Gerador de números em [0, 1). Injetado para que simulações sejam reproduzíveis. */
 export type Aleatorio = () => number;
@@ -110,4 +110,47 @@ export function probabilidadeImbativel(carta: Carta, visao: VisaoMesa): number {
 /** Pontos que a dupla adversária ganha se a nossa correr agora. */
 export function adversarioVenceSeCorrermos(visao: VisaoMesa): boolean {
   return visao.placar[outraDupla(visao.dupla)] + visao.valorMao >= 12;
+}
+
+/* ---------------- Sinais do parceiro (RN-027) ---------------- */
+
+const NAIPE_DO_SINAL: Partial<Record<Sinal, Carta['naipe']>> = { zap: 'paus', copas: 'copas', espadilha: 'espadas', picafumo: 'ouros' };
+const VALOR_DO_SINAL: Partial<Record<Sinal, Carta['valor']>> = { tres: '3', dois: '2', as: 'A' };
+
+/** A carta que o sinal anuncia (manilha exata, ou um valor comum de naipe desconhecido). */
+function cartaDoSinal(sinal: Sinal, visao: VisaoMesa): { valor: Carta['valor']; naipe?: Carta['naipe'] } | undefined {
+  const naipe = NAIPE_DO_SINAL[sinal];
+  if (naipe) return { valor: visao.manilha, naipe };
+  const valor = VALOR_DO_SINAL[sinal];
+  return valor && valor !== visao.manilha ? { valor } : undefined;
+}
+
+/**
+ * Força (0 a 1) da melhor carta que o parceiro sinalizou e ainda não jogou nesta mão.
+ * `-1` se ele sinalizou "nada"; `undefined` se não sinalizou nada útil.
+ */
+export function forcaSinalizadaDoParceiro(visao: VisaoMesa): number | undefined {
+  const parceiro = parceiroDe(visao.assento);
+  const jogadas = visao.rodadas.flatMap((r) => r.jogadas).filter((j) => j.assento === parceiro);
+  let melhor: number | undefined;
+  for (const { sinal } of visao.sinaisDoParceiro) {
+    if (sinal === 'nada') {
+      melhor ??= -1;
+      continue;
+    }
+    const c = cartaDoSinal(sinal, visao);
+    if (!c) continue;
+    const jogou = jogadas.some((j) => j.carta && j.carta.valor === c.valor && (c.naipe === undefined || j.carta.naipe === c.naipe));
+    if (jogou) continue;
+    const f = c.naipe ? 100 + ['ouros', 'espadas', 'copas', 'paus'].indexOf(c.naipe) : ORDEM_VALORES.indexOf(c.valor);
+    melhor = Math.max(melhor ?? -1, forcaNormalizada(f));
+  }
+  return melhor;
+}
+
+/** O parceiro ainda vai jogar nesta rodada. */
+export function parceiroAindaJoga(visao: VisaoMesa): boolean {
+  const rodada = visao.rodadas[visao.rodadas.length - 1];
+  const parceiro = parceiroDe(visao.assento);
+  return !!rodada && !rodada.jogadas.some((j) => j.assento === parceiro) && visao.quantidadeCartas[parceiro] > 0;
 }

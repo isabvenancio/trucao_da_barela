@@ -52,4 +52,12 @@ describe('Plano 9.1 - Mapeamento de eventos para slots de som', () => {
       ),
     ).toEqual(['distribuir', 'maoDeOnze', 'maoDeFerro', 'aceitar', 'correr', 'correr']);
   });
+
+  it('sinal do parceiro toca o slot "sinal"; o próprio sinal não toca', () => {
+    const eventos: Evento[] = [
+      { tipo: 'SINAL_ENVIADO', assento: 2, sinal: 'zap' },
+      { tipo: 'SINAL_ENVIADO', assento: 0, sinal: 'nada' },
+    ];
+    expect(sonsDosEventos(eventos, 0, 0)).toEqual(['sinal']);
+  });
 });

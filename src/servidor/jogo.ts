@@ -6,7 +6,7 @@ import {
   visaoDoAssento,
 } from '../engine/index.ts';
 import type { Acao, Assento, EstadoPartida, Evento, Participante, Rodada } from '../engine/index.ts';
-import { decidirBot } from '../bots/index.ts';
+import { aplicarSinaisDosBots, comecouMao, decidirBot } from '../bots/index.ts';
 import { assentosOcupados, controladoPorBot, presente, transferirAnfitriao } from './sala.ts';
 import type { AssentoPublico, RespostaEstado, Sala } from './tipos.ts';
 import { ErroServidor } from './tipos.ts';
@@ -36,6 +36,15 @@ function registrarLote(sala: Sala, eventos: Evento[]) {
 
 /** Depois de cada ação: guarda eventos, pausa de fim de rodada, ritmo dos bots e prazo do humano. */
 function depoisDaAcao(sala: Sala, anterior: EstadoPartida, novo: EstadoPartida, eventos: Evento[], agora: Date) {
+  // RN-027: bots sinalizam ao parceiro assim que a mão começa.
+  if (comecouMao(eventos) && novo.fase === 'jogando') {
+    const s = aplicarSinaisDosBots(novo, (a) => {
+      const o = sala.assentos[a];
+      return o?.tipo === 'bot' ? (o.dificuldade ?? 'medio') : undefined;
+    });
+    novo = s.estado;
+    eventos = [...eventos, ...s.eventos];
+  }
   sala.partida = novo;
   registrarLote(sala, eventos);
   sala.expiraEm = mais(agora, HORAS_INATIVIDADE * 3_600_000);
@@ -103,6 +112,12 @@ export function acaoHumana(sala: Sala, meu: Assento, acao: Acao, agora: Date): v
   const anterior = sala.partida;
   const r = aplicarAcao(anterior, { ...acao, assento: meu } as Acao);
   if (!r.ok) throw new ErroServidor('REGRA', r.erro.mensagem, 422);
+  if (acao.tipo === 'SINALIZAR') {
+    // Sinal não mexe no prazo, na pausa nem no ritmo dos bots (RN-027).
+    sala.partida = r.estado;
+    registrarLote(sala, r.eventos);
+    return;
+  }
   depoisDaAcao(sala, anterior, r.estado, r.eventos, agora);
 }
 

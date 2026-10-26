@@ -3,6 +3,7 @@ import type { Aleatorio } from './avaliacao.ts';
 import { estrategia } from './estrategias.ts';
 
 export type { Aleatorio } from './avaliacao.ts';
+export { aplicarSinaisDosBots, comecouMao, sinaisDoBot, sinalDaCarta } from './sinais.ts';
 
 function mesmaAcao(a: Acao, b: Acao): boolean {
   if (a.tipo !== b.tipo || a.assento !== b.assento) return false;

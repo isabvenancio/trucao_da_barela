@@ -1,5 +1,6 @@
 import { duplaDe, parceiroDe } from './mesa.ts';
 import { acoesValidas, assentoDaVez } from './partida.ts';
+import { sinaisDisponiveis, sinaisVisiveis } from './sinais.ts';
 import type {
   Acao,
   Assento,
@@ -12,6 +13,8 @@ import type {
   Participante,
   PedidoTruco,
   ResultadoRodada,
+  Sinal,
+  SinalFeito,
   TipoMao,
   Valor,
 } from './tipos.ts';
@@ -54,6 +57,10 @@ export interface VisaoMesa {
   pedido?: PedidoTruco;
   decisaoOnze?: DecisaoOnze;
   acoes: Acao[];
+  /** RN-027: sinais do parceiro nesta mão (nunca os da dupla adversária). */
+  sinaisDoParceiro: SinalFeito[];
+  meusSinais: Sinal[];
+  sinaisDisponiveis: Sinal[];
   versao: number;
 }
 
@@ -93,6 +100,9 @@ export function visaoDoAssento(estado: EstadoPartida, assento: Assento): VisaoMe
     vez: mao.vez,
     aguardando: assentoDaVez(estado),
     acoes: acoesValidas(estado, assento),
+    sinaisDoParceiro: sinaisVisiveis(estado, assento).filter((s) => s.assento !== assento).map((s) => ({ ...s })),
+    meusSinais: sinaisVisiveis(estado, assento).filter((s) => s.assento === assento).map((s) => s.sinal),
+    sinaisDisponiveis: sinaisDisponiveis(estado, assento),
     versao: estado.versao,
   };
   if (estado.vencedora !== undefined) visao.vencedora = estado.vencedora;
@@ -102,9 +112,9 @@ export function visaoDoAssento(estado: EstadoPartida, assento: Assento): VisaoMe
   return visao;
 }
 
-/** Remove dos eventos o que o assento não pode saber (carta encoberta alheia). */
+/** Remove dos eventos o que o assento não pode saber: carta encoberta alheia e sinais da outra dupla. */
 export function eventosParaAssento(eventos: readonly Evento[], assento: Assento): Evento[] {
-  return eventos.map((e) => {
+  return eventos.filter((e) => e.tipo !== 'SINAL_ENVIADO' || duplaDe(e.assento) === duplaDe(assento)).map((e) => {
     if (e.tipo === 'CARTA_JOGADA' && e.encoberta && e.assento !== assento) {
       return { ...e, carta: null, manilha: false, zap: false };
     }

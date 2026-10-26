@@ -1,5 +1,6 @@
 import { duplaDe, nomeCarta } from '../../engine/index.ts';
 import type { Assento, Dupla, EstadoPartida, Evento } from '../../engine/index.ts';
+import { SINAIS_INFO } from '../arte/sinais.tsx';
 
 export const NOME_PEDIDO: Record<number, string> = { 3: 'Truco', 6: 'Seis', 9: 'Nove', 12: 'Doze' };
 
@@ -39,6 +40,12 @@ export function narrar(e: Evento, participantes: EstadoPartida['participantes'],
       return `${nomeDupla(e.vencedora, meu)} ganharam ${e.pontos} ${e.pontos === 1 ? 'ponto' : 'pontos'}. Placar: ${e.placar[duplaDe(meu)]} × ${e.placar[1 - duplaDe(meu)]}.`;
     case 'PARTIDA_ENCERRADA':
       return e.vencedora === duplaDe(meu) ? 'Vocês venceram a partida!' : 'Eles venceram a partida.';
+    case 'SINAL_ENVIADO': {
+      const info = SINAIS_INFO[e.sinal];
+      return e.assento === meu
+        ? `Você fez o sinal ${info.nome.toLowerCase()} (${info.gesto.toLowerCase()}).`
+        : `${participantes[e.assento].nome} ${info.gesto.toLowerCase()}: ${info.significado.toLowerCase()}.`;
+    }
   }
 }
 

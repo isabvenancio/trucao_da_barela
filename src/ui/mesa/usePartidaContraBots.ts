@@ -4,11 +4,12 @@ import {
   assentoDaVez,
   criarPartida,
   criarRevanche,
+  eventosParaAssento,
   mesmaCarta,
   visaoDoAssento,
 } from '../../engine/index.ts';
 import type { Acao, Assento, Dificuldade, EstadoPartida, Evento, Participante, VisaoMesa } from '../../engine/index.ts';
-import { decidirBot } from '../../bots/index.ts';
+import { aplicarSinaisDosBots, comecouMao, decidirBot } from '../../bots/index.ts';
 import { AVATARES } from '../arte/avatares.tsx';
 import { apagar, FATOR_VELOCIDADE, gravar, lerBruto } from '../armazenamento.ts';
 import type { Perfil, Preferencias } from '../armazenamento.ts';
@@ -38,6 +39,13 @@ const NOMES_BOTS = ['Tijolo', 'Cascalho', 'Brasa', 'Musgo', 'Granito', 'Argila',
 
 /** Tempos base em ms, multiplicados pela velocidade das preferências (UC-002). */
 const TEMPO = { bot: 750, rodada: 1300, mao: 2100, anuncio: 1700 };
+
+/** RN-027: os bots (assentos 1 a 3) sinalizam ao parceiro no começo de cada mão. */
+function comSinaisDosBots(estado: EstadoPartida, eventos: Evento[]): { estado: EstadoPartida; eventos: Evento[] } {
+  if (!comecouMao(eventos) || estado.fase !== 'jogando') return { estado, eventos };
+  const s = aplicarSinaisDosBots(estado, (a) => (estado.participantes[a].tipo === 'bot' ? (estado.participantes[a].dificuldade ?? 'medio') : undefined));
+  return { estado: s.estado, eventos: [...eventos, ...s.eventos] };
+}
 
 function sortear<T>(lista: readonly T[], quantos: number): T[] {
   return [...lista].sort(() => Math.random() - 0.5).slice(0, quantos);
@@ -111,9 +119,11 @@ export function usePartidaContraBots(preferencias: Preferencias) {
 
   /** Sons, anúncios e narração de um lote de eventos. */
   const processar = useCallback(
-    (eventos: Evento[], estado: EstadoPartida) => {
+    (todos: Evento[], estado: EstadoPartida) => {
+      // Só o que o jogador pode saber (RN-018): sinais da dupla adversária e cartas encobertas alheias ficam de fora.
+      const eventos = eventosParaAssento(todos, MEU_ASSENTO);
       if (eventos.length === 0) return;
-      tocarSequencia(sonsDosEventos(eventos, 0));
+      tocarSequencia(sonsDosEventos(eventos, 0, MEU_ASSENTO));
       const frases = eventos.map((e) => narrar(e, estado.participantes, MEU_ASSENTO)).filter((f): f is string => !!f);
       if (frases.length) setNarracao((n) => [...n, ...frases].slice(-8));
       for (const e of eventos) {
@@ -138,11 +148,12 @@ export function usePartidaContraBots(preferencias: Preferencias) {
     (acao: Acao): boolean => {
       const atual = jogoRef.current;
       if (!atual || pausaRef.current) return false;
-      const r = aplicarAcao(atual.estado, acao);
-      if (!r.ok) {
-        setNarracao((n) => [...n, r.erro.mensagem].slice(-8));
+      const aplicado = aplicarAcao(atual.estado, acao);
+      if (!aplicado.ok) {
+        setNarracao((n) => [...n, aplicado.erro.mensagem].slice(-8));
         return false;
       }
+      const r = { ok: true as const, ...comSinaisDosBots(aplicado.estado, aplicado.eventos) };
       const proximo = { ...atual, estado: r.estado };
       const corte = r.eventos.findIndex((e) => e.tipo === 'MAO_DISTRIBUIDA');
       const agora = corte >= 0 ? r.eventos.slice(0, corte) : r.eventos;
@@ -195,7 +206,8 @@ export function usePartidaContraBots(preferencias: Preferencias) {
 
   const iniciar = useCallback(
     (perfil: Perfil, config: ConfigBots) => {
-      const { estado, eventos } = criarPartida({ participantes: montarParticipantes(perfil, config), semente: Date.now() });
+      const nova = criarPartida({ participantes: montarParticipantes(perfil, config), semente: Date.now() });
+      const { estado, eventos } = comSinaisDosBots(nova.estado, nova.eventos);
       const novo = { estado, config };
       setJogo(novo);
       jogoRef.current = novo;
@@ -236,7 +248,8 @@ export function usePartidaContraBots(preferencias: Preferencias) {
   const revanche = useCallback(() => {
     const atual = jogoRef.current;
     if (!atual) return;
-    const { estado, eventos } = criarRevanche(atual.estado, Date.now());
+    const nova = criarRevanche(atual.estado, Date.now());
+    const { estado, eventos } = comSinaisDosBots(nova.estado, nova.eventos);
     const novo = { ...atual, estado };
     setJogo(novo);
     jogoRef.current = novo;

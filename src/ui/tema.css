@@ -1331,6 +1331,191 @@ a {
   text-align: center;
 }
 
+/* ---------------- Sinais (RN-027) ---------------- */
+
+.rosto-sinal {
+  display: inline-flex;
+  flex-shrink: 0;
+}
+
+.rosto-sinal svg {
+  width: 100%;
+  height: 100%;
+}
+
+.assento__sinais {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  justify-content: center;
+  max-width: 220px;
+}
+
+.assento__sinal {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 1px 5px 1px 2px;
+  font-size: 15px;
+  line-height: 1;
+  background: #3a2f12;
+  border: 2px solid var(--ouro-escuro);
+  color: var(--ouro);
+}
+
+.balao-sinal {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 50%;
+  translate: -50% 0;
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  background: var(--papel);
+  color: #3b2414;
+  border: 3px solid #3b2414;
+  white-space: nowrap;
+  animation: aparecer 0.25s steps(3);
+}
+
+.balao-sinal::before {
+  content: '';
+  position: absolute;
+  top: -9px;
+  left: 50%;
+  translate: -50% 0;
+  border: 6px solid transparent;
+  border-bottom-color: #3b2414;
+  border-top: 0;
+}
+
+.balao-sinal strong {
+  display: block;
+  font-family: var(--fonte-titulo);
+  font-size: 11px;
+  font-weight: 400;
+}
+
+.balao-sinal small {
+  font-size: 16px;
+}
+
+.painel__sinais {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.painel__meus-sinais {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  font-size: 16px;
+  color: var(--texto-suave);
+}
+
+.botao--sinais {
+  --cor: #6a3fa0;
+  --sombra: #3e2366;
+  --luz: #8e63c4;
+}
+
+.botao--sinais-aberto {
+  outline: 3px solid var(--ouro);
+}
+
+.lista-sinais {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.lista-sinais__item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 6px 4px;
+  min-height: var(--toque);
+  font: inherit;
+  color: var(--texto);
+  background: #2b2140;
+  border: 3px solid #3e2366;
+  cursor: pointer;
+}
+
+.lista-sinais__item:hover {
+  border-color: var(--ouro);
+}
+
+.lista-sinais__nome {
+  font-family: var(--fonte-titulo);
+  font-size: 10px;
+}
+
+.lista-sinais__gesto {
+  font-size: 15px;
+  color: var(--texto-suave);
+  line-height: 1.1;
+  text-align: center;
+}
+
+.testar-sons summary {
+  min-height: var(--toque);
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  font-family: var(--fonte-titulo);
+  font-size: 11px;
+}
+
+.testar-sons__lista {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+
+.testar-sons__lista li {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-areas: 'tocar nome origem' 'tocar slot origem';
+  align-items: center;
+  column-gap: 10px;
+}
+
+.testar-sons__lista li > button {
+  grid-area: tocar;
+  min-width: var(--toque);
+}
+
+.testar-sons__nome {
+  grid-area: nome;
+  line-height: 1.1;
+}
+
+.testar-sons__slot {
+  grid-area: slot;
+  font-size: 15px;
+  color: var(--texto-suave);
+}
+
+.testar-sons__lista .tag {
+  grid-area: origem;
+  font-size: 15px;
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 /* ---------------- Celular ---------------- */
 
 @media (max-width: 560px) {
@@ -1359,6 +1544,18 @@ a {
   }
 
   .assento__tag {
+    display: none;
+  }
+
+  .assento__sinais {
+    max-width: 96px;
+  }
+
+  .assento__sinal {
+    font-size: 13px;
+  }
+
+  .balao-sinal small {
     display: none;
   }
 

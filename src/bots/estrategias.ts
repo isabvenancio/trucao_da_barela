@@ -3,7 +3,9 @@ import type { Acao, Dificuldade, VisaoMesa } from '../engine/index.ts';
 import {
   adversarioVenceSeCorrermos,
   forcaNormalizada,
+  forcaSinalizadaDoParceiro,
   minhasCartas,
+  parceiroAindaJoga,
   probabilidadeImbativel,
   situacaoDaRodada,
 } from './avaliacao.ts';
@@ -50,6 +52,10 @@ function escolherCarta(visao: VisaoMesa, aleatorio: Aleatorio): Acao {
     return cobre && cobre.forca < 100 ? jogar(visao, cobre) : descartar();
   }
 
+  // O parceiro ainda joga e avisou que tem manilha forte: guarda as cartas boas (RN-027).
+  const sinalizada = forcaSinalizadaDoParceiro(visao) ?? 0;
+  if (parceiroAindaJoga(visao) && sinalizada >= 0.95 && s.maior < 100) return descartar();
+
   // Adversário ganhando ou mesa empatada: a menor carta que vence.
   const vence = cartas.find((c) => c.forca > s.maior);
   if (vence) return jogar(visao, vence);
@@ -69,7 +75,9 @@ function escolherCarta(visao: VisaoMesa, aleatorio: Aleatorio): Acao {
 function equidadeMedio(visao: VisaoMesa): number {
   const cartas = minhasCartas(visao).map((c) => forcaNormalizada(c.forca)).sort((a, b) => b - a);
   const s = situacaoDaRodada(visao);
+  const sinal = forcaSinalizadaDoParceiro(visao);
   const e =
+    (sinal === undefined ? 0 : sinal < 0 ? -0.05 : 0.2 * sinal) +
     0.45 * (cartas[0] ?? 0) +
     0.3 * (cartas[1] ?? 0) +
     0.25 * (s.vitorias - s.derrotas) +
@@ -86,7 +94,10 @@ function equidadeDificil(visao: VisaoMesa): number {
   const p1 = probs[0] ?? 0;
   const p2 = probs[1] ?? 0;
   const s = situacaoDaRodada(visao);
-  const parceiro = s.parceiroGanhando ? 0.2 : 0.1;
+  const sinal = forcaSinalizadaDoParceiro(visao);
+  const base = s.parceiroGanhando ? 0.2 : 0.1;
+  // Peso 0,4 calibrado no simulador: maior que isso o difícil pede truco demais e perde do médio.
+  const parceiro = sinal === undefined ? base : sinal < 0 ? 0.05 : Math.max(base, sinal * 0.4);
   let e: number;
   if (s.vitorias > s.derrotas) e = 1 - (1 - p1) * (1 - parceiro);
   else if (s.derrotas > s.vitorias) e = p1 * Math.max(p2, parceiro);

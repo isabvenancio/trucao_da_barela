@@ -52,7 +52,7 @@ export function useSalaOnline(codigo: string, perfil: Perfil) {
     if (!primeira.current && participantes) {
       for (const lote of r.lotes) {
         if (lote.versao <= versao.current) continue;
-        tocarSequencia(sonsDosEventos(lote.eventos, r.visao!.dupla));
+        tocarSequencia(sonsDosEventos(lote.eventos, r.visao!.dupla, r.meuAssento));
         const frases = lote.eventos
           .map((e) => narrar(e, participantes as never, r.meuAssento))
           .filter((f): f is string => !!f);
@@ -183,7 +183,11 @@ export function useSalaOnline(codigo: string, perfil: Perfil) {
     };
   }
 
-  const segundosRestantes = resposta?.prazo ? Math.max(0, Math.ceil((new Date(resposta.prazo).getTime() - agoraServidor) / 1000)) : undefined;
+  // O prazo do servidor inclui a pausa da mesa; o contador nunca passa do tempo da decisão (30 s / 20 s).
+  const limite = resposta?.visao?.pedido || resposta?.visao?.decisaoOnze ? 20 : 30;
+  const segundosRestantes = resposta?.prazo
+    ? Math.min(limite, Math.max(0, Math.ceil((new Date(resposta.prazo).getTime() - agoraServidor) / 1000)))
+    : undefined;
   useEffect(() => {
     if (segundosRestantes !== undefined && segundosRestantes <= 5 && segundosRestantes > 0 && avisouTempo.current !== resposta?.prazo) {
       avisouTempo.current = resposta?.prazo;
