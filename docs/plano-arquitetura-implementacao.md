@@ -1,7 +1,7 @@
 # Trucão da Barela — Plano de arquitetura e implementação
 
 > Análise e Projeto de Software · Prof. Dr. João Choma · Situação: **Proposto**
-> Documentos relacionados: [01 — Regras de negócio](01-regras-de-negocio.md) · [02 — Requisitos](02-requisitos.md) · [03 — Casos de uso](03-casos-de-uso.md)
+> Documentos relacionados: [01 — Regras de negócio](regras-de-negocio.md) · [02 — Requisitos](requisitos.md) · [03 — Casos de uso](casos-de-uso.md)
 
 ## 1. Visão do produto
 
@@ -30,81 +30,72 @@ Fora do escopo nesta versão: ranking global, chat de texto livre, apostas/pagam
 flowchart LR
   subgraph Navegador["Navegador (React + Vite)"]
     UI[Telas React]
-    Store[Estado - Zustand]
-    EngineLocal[Motor de regras + Bots<br/>modo offline]
+    Hooks[Estado - hooks do React]
+    EngineLocal[Motor de regras + Bots<br/>modo contra bots]
     Marcador[Marcador de pontos<br/>localStorage]
   end
 
   subgraph Vercel
     Static[Hospedagem estática]
-    API["Funções /api<br/>(Node, TypeScript)"]
-    EngineSrv[Motor de regras + Bots<br/>modo online]
+    API["Funções /api<br/>(bundle de src/servidor)"]
+    EngineSrv[Motor de regras + Bots<br/>modo online, autoritativo]
   end
 
   subgraph Supabase
-    DB[(Postgres<br/>salas, participantes, partidas)]
-    RT[Realtime Broadcast<br/>canal da sala]
+    DB[(Postgres<br/>tabela salas)]
   end
 
-  UI --> Store
-  Store --> EngineLocal
+  UI --> Hooks
+  Hooks --> EngineLocal
   UI --> Marcador
   Static --> UI
-  Store -- "POST ação / GET visão" --> API
+  Hooks -- "POST ação" --> API
+  Hooks -- "GET estado a cada ~0,7 s" --> API
   API --> EngineSrv
-  API --> DB
-  API -- "aviso: versão N" --> RT
-  RT -- "versão mudou" --> Store
+  API -- "REST (PostgREST)<br/>gravação com versão" --> DB
 ```
 
-**Fluxo online em uma frase:** o cliente envia a ação para `/api`, a função carrega o estado da partida no Postgres, valida com o motor, aplica jogadas de bots pendentes, grava com controle de versão e publica no canal da sala apenas “versão N disponível”; cada cliente então busca **a sua visão** (só suas cartas) com seu token de assento.
+**Fluxo online em uma frase:** o navegador envia a ação para `/api`; a função lê a sala no Postgres, valida com o motor, grava com controle de versão; e cada navegador, ao consultar o estado (a cada ~0,7 s), recebe **só a sua visão** e os eventos novos — e é nessa consulta que os bots jogam, no ritmo da mesa, e que prazos vencidos são aplicados.
 
-Por que não WebSocket próprio: funções da Vercel não mantêm conexões abertas. Truco é por turnos, então requisição + aviso em tempo real é suficiente (latência alvo < 1 s, RNF-003).
+**Decisão da fase 6 — consulta periódica em vez de Realtime.** Funções da Vercel não mantêm conexões abertas, e truco é por turnos. A consulta a cada ~0,7 s cumpre a meta de latência (RNF-003) sem SDK nem WebSocket, funciona igual com o banco em memória (`npm run dev`) e no Supabase, e deixa o servidor como único dono do relógio (bots e prazos). O ator secundário “Serviço de tempo real” dos casos de uso é atendido por essa consulta; o Supabase Realtime pode substituí-la depois sem mudar nenhum caso de uso.
 
 ## 3. Stack
 
 | Camada | Escolha | Observação |
 |---|---|---|
 | Front-end | React 18 + Vite + TypeScript | SPA, deploy estático na Vercel |
-| Rotas | React Router | `/`, `/bots`, `/sala/:codigo`, `/marcador`, `/regras` |
-| Estado | Zustand | Simples, sem boilerplate |
-| Estilo | CSS Modules + variáveis CSS | Tema pixel; fonte pixel com licença OFL (Google Fonts) |
-| Animações | Framer Motion | Distribuição, jogada e recolhimento de cartas |
-| Back-end | Vercel Functions (`/api/*.ts`) | Sem servidor dedicado |
-| Banco + tempo real | Supabase (Postgres + Realtime Broadcast) | Plano gratuito |
-| Testes | Vitest (motor/bots), Testing Library (UI), Playwright (e2e) | |
-| Qualidade | ESLint + Prettier + GitHub Actions | CI em todo PR |
+| Rotas | React Router | `/`, `/bots`, `/sala/:codigo`, `/marcador`, `/regras`, `/perfil`, `/preferencias` |
+| Estado | Hooks do React (`useState`, `useRef`) | Um hook por modo: `usePartidaContraBots`, `useSalaOnline`, `useMarcador` |
+| Estilo | CSS com variáveis + arte em SVG gerada de mapas de pixels | Tema de blocos autoral; fontes pixel OFL (Google Fonts) |
+| Animações | CSS (`steps()`), sem biblioteca | Combina com o estilo pixel e não pesa no pacote |
+| Back-end | Vercel Functions com `Request`/`Response` padrão | `api/*.js` importam o bundle `api/_lib/servidor.mjs`, gerado de `src/servidor` por `npm run build:api` |
+| Banco | Supabase Postgres via REST (PostgREST), sem SDK | Sem as variáveis, `npm run dev` usa banco em memória |
+| Testes | Vitest (motor, bots, marcador, servidor) + Playwright (fluxos no navegador) | |
+| Qualidade | ESLint + GitHub Actions | CI em todo PR |
 
-## 4. Estrutura de pastas proposta
+## 4. Estrutura de pastas
 
 ```
 trucao_da_barela/
 ├─ docs/                    # documentação da disciplina (este material)
-├─ api/                     # funções serverless da Vercel
-│  ├─ salas/criar.ts        # UC-005
-│  ├─ salas/entrar.ts       # UC-006, UC-015
-│  ├─ salas/assentos.ts     # UC-007
-│  ├─ partidas/iniciar.ts   # UC-008, UC-016
-│  ├─ partidas/acao.ts      # UC-010 a UC-014
-│  ├─ partidas/visao.ts     # visão por assento (RN-018)
-│  └─ partidas/prazo.ts     # decisões expiradas (RN-021)
+├─ api/                     # funções da Vercel (finas): só chamam src/servidor/http.ts
+│  ├─ _lib/servidor.mjs     # bundle gerado por `npm run build:api` (não editar)
+│  ├─ salas/criar.js        # UC-005
+│  ├─ salas/entrar.js       # UC-006, UC-015
+│  ├─ salas/assentos.js     # UC-007
+│  ├─ salas/estado.js       # visão do assento + bots + prazos (RN-018, RN-021)
+│  ├─ salas/sair.js         # UC-014
+│  ├─ partidas/iniciar.js   # UC-008, UC-016
+│  └─ partidas/acao.js      # UC-010 a UC-013
 ├─ src/
 │  ├─ engine/               # motor de regras PURO (sem React, sem rede)
-│  │  ├─ baralho.ts         # RN-001..RN-004
-│  │  ├─ mesa.ts            # RN-005..RN-008
-│  │  ├─ rodada.ts          # RN-009..RN-011
-│  │  ├─ truco.ts           # RN-012..RN-014
-│  │  ├─ maoDeOnze.ts       # RN-015, RN-016
-│  │  ├─ partida.ts         # RN-017, RN-026 + aplicarAcao()
-│  │  ├─ visao.ts           # RN-018: estado -> visão do assento
-│  │  └─ __tests__/         # um arquivo de teste por RN
-│  ├─ bots/                 # RN-019: facil.ts, medio.ts, dificil.ts
+│  ├─ bots/                 # RN-019, RF-021
 │  ├─ marcador/             # RN-024, RN-025
-│  ├─ online/               # cliente da API + assinatura do canal
-│  ├─ ui/                   # componentes (Mesa, Carta, Avatar, Placar...)
-│  ├─ pages/                # telas
-│  └─ assets/               # arte original (cartas, avatares, sons)
-├─ supabase/migrations/     # SQL das tabelas
+│  ├─ servidor/             # salas, jogo autoritativo, repositório (memória/Supabase), rotas HTTP
+│  ├─ online/               # cliente da API, credenciais, hook da sala e lobby
+│  ├─ ui/                   # arte, mesa, sons, armazenamento, tema
+│  └─ pages/                # telas
+├─ supabase/migrations/     # SQL da tabela salas
 └─ README.md
 ```
 
@@ -124,7 +115,7 @@ acoesValidas(estado: EstadoPartida, assento): Acao[]   // usado por bots e pela 
 
 ### Ações
 
-`JOGAR_CARTA {carta, encoberta}` · `PEDIR_TRUCO` · `RESPONDER_TRUCO {aceitar | correr | aumentar}` · `DECIDIR_MAO_DE_ONZE {jogar | correr}` · `SAIR`
+`JOGAR_CARTA {indice, encoberta}` · `PEDIR_TRUCO` · `RESPONDER_TRUCO {aceitar | correr | aumentar}` · `DECIDIR_MAO_DE_ONZE {jogar | correr}` (sair é tratado pela sala, não pelo motor)
 
 ### Máquina de estados da mão
 
@@ -155,65 +146,66 @@ Os bots recebem **apenas a visão do seu assento** (mesma função `visaoDoAssen
 |---|---|---|---|
 | Fácil | Carta válida aleatória | Pede raramente; aceita ao acaso | Joga se tiver manilha |
 | Médio | Heurística: ganha a rodada com a menor carta suficiente; se o parceiro já ganha, descarta a menor | Pede/aceita conforme força da mão (pontuação por carta) | Soma força das 6 cartas da dupla |
-| Difícil | Médio + memória de cartas já jogadas e de manilhas restantes | Médio + blefe ocasional e leitura do placar | Médio + risco conforme placar |
+| Difícil | Igual ao médio | Probabilidade de cada carta ser imbatível, calculada a partir das cartas já vistas na mão | Médio + mais disposição quando o adversário está perto de 12 |
+| Todos | Guardam as cartas boas se o parceiro sinalizou zap/copas e ainda vai jogar | Somam a força sinalizada pelo parceiro (RN-027) | — |
 
-Validação: um **simulador** roda milhares de partidas bot × bot (ex.: Difícil deve vencer Fácil com folga) e acusa qualquer ação inválida.
+Validação: um **simulador** (`src/bots/simulador.ts`) roda partidas bot × bot e acusa qualquer ação inválida. Resultado na fase 3 (1.000+ partidas por confronto, zero ações inválidas, decisão mais lenta abaixo de 7 ms):
+
+| Confronto | Vitórias da 1ª dupla |
+|---|---|
+| Médio × fácil | ≈ 90% |
+| Difícil × fácil | ≈ 86% |
+| Difícil × médio | ≈ 61% |
+
+Blefe, “pagar para ver”, abrir com a carta mais fraca e encobrir no descarte foram testados para o difícil e **pioraram** o desempenho (vencia o médio em só 53%), por isso ficaram de fora.
 
 ## 7. Modelo de dados (online)
 
+Na implementação (fase 6), cada sala é **uma linha** com o documento completo em `jsonb`. Assim, sala, participantes e partida são lidos e gravados juntos, numa única escrita condicional — sem transações entre tabelas.
+
 ```mermaid
 erDiagram
-  SALA ||--o{ PARTICIPANTE : possui
-  SALA ||--o{ PARTIDA : realiza
-  SALA {
-    uuid id PK
-    text codigo UK "6 caracteres"
-    text status "aguardando | em_jogo | encerrada"
-    int assento_anfitriao
-    timestamptz criada_em
-    timestamptz expira_em
-  }
-  PARTICIPANTE {
-    uuid id PK
-    uuid sala_id FK
-    int assento "0..3"
-    text apelido
-    text avatar
-    text tipo "humano | bot"
-    text dificuldade "facil | medio | dificil"
-    text token_hash "hash do token de assento"
-    timestamptz ultimo_sinal
-  }
-  PARTIDA {
-    uuid id PK
-    uuid sala_id FK
-    jsonb estado "estado completo do motor"
+  SALAS {
+    text codigo PK "6 caracteres sem ambíguos"
     int versao "controle otimista"
-    int placar_a
-    int placar_b
-    timestamptz iniciada_em
-    timestamptz encerrada_em
+    jsonb dados "documento Sala (abaixo)"
+    timestamptz atualizada_em
+    timestamptz expira_em "linha apagada depois disto"
   }
 ```
 
-- O cliente nunca recebe `PARTIDA.estado`; recebe só a visão do assento (RNF-002).
-- Gravação com `UPDATE ... WHERE versao = N`: se duas ações chegam juntas, a segunda é recusada e reavaliada (RNF-001).
-- Tabelas acessadas apenas pelas funções `/api` (chave de serviço); RLS bloqueando acesso direto do navegador.
-- Dados de salas encerradas apagados após 24 h (RNF-007).
+Documento `Sala` (`src/servidor/tipos.ts`), com as mesmas entidades do modelo conceitual:
 
-Modo offline e marcador usam `localStorage` com chaves versionadas: `trucao.perfil.v1`, `trucao.preferencias.v1`, `trucao.marcador.v1`.
+| Campo | Conteúdo |
+|---|---|
+| `situacao`, `anfitriao`, `criadaEm`, `expiraEm` | Sala (RN-020) |
+| `assentos[0..3]` | Participante: humano ou bot, apelido, avatar, nível, **hash** da credencial, último sinal de presença, saiu (RN-022, RN-023) |
+| `partida` | Estado completo do motor — mão, rodadas, cartas, placar (nunca enviado ao navegador) |
+| `lotes` | Últimos 40 lotes de eventos, entregues filtrados por assento |
+| `destaque`, `prazo`, `proximoBotEm` | Pausa de fim de rodada, prazo do humano (RN-021) e ritmo dos bots |
 
-## 8. API (resumo)
+- O navegador recebe só `RespostaEstado`: visão do assento, assentos públicos e eventos filtrados (RNF-002).
+- Gravação com `PATCH ...?codigo=eq.X&versao=eq.N`: se outra requisição gravou antes, o servidor relê e reaplica (RNF-001).
+- A tabela só é acessada pelas funções, com a chave de serviço; RLS ligado e sem políticas para a chave pública.
+- A linha é apagada 24 h após a expiração ou o encerramento da sala (RNF-007).
+
+Modo contra bots e marcador usam `localStorage` com chaves versionadas: `trucao.perfil.v1`, `trucao.preferencias.v1`, `trucao.partidaBots.v1`, `trucao.marcador.v1`, `trucao.salas.v1` (credenciais de assento).
+
+## 8. API
+
+A credencial do assento vai no cabeçalho `x-credencial` (exceto na criação).
 
 | Método e rota | Uso | UC |
 |---|---|---|
-| `POST /api/salas/criar` | cria sala; devolve código e token do anfitrião | UC-005 |
-| `POST /api/salas/entrar` | ocupa assento ou reconecta com token | UC-006, UC-015 |
-| `POST /api/salas/assentos` | trocar assento, adicionar/remover bot | UC-007 |
-| `POST /api/partidas/iniciar` | inicia partida ou revanche | UC-008, UC-016 |
-| `POST /api/partidas/acao` | jogar, truco, resposta, mão de onze, sair | UC-010 a UC-014 |
-| `GET /api/partidas/visao` | visão do assento autenticado pelo token | todos da mesa |
-| `POST /api/partidas/prazo` | qualquer cliente avisa prazo vencido; o servidor confere o relógio | RN-021 |
+| `POST /api/salas/criar` | cria sala; devolve código e credencial do anfitrião | UC-005 |
+| `POST /api/salas/entrar` | ocupa assento; com credencial guardada, reconecta | UC-006, UC-015 |
+| `POST /api/salas/assentos` | mover, adicionar/remover bot, trocar, sortear | UC-007 |
+| `GET /api/salas/estado?codigo&desde` | visão do assento e eventos novos; registra presença, faz os bots jogarem e aplica prazos vencidos | RF-021, RF-022, RN-021, RN-022 |
+| `POST /api/salas/sair` | sair da sala ou da partida | UC-014 |
+| `POST /api/partidas/iniciar` | inicia a partida ou a revanche | UC-008, UC-016 |
+| `POST /api/partidas/acao` | jogar carta, pedir/responder truco, mão de onze | UC-010 a UC-013 |
+
+Erros vêm como `{ erro, codigo }` com status HTTP adequado (404 sala inexistente, 409 sala cheia/em jogo, 401 credencial inválida, 403 sem permissão, 422 regra do jogo).
 
 ## 9. Telas
 
@@ -269,6 +261,14 @@ public/sons/
 - Volume e liga/desliga vêm das preferências (UC-002). Formatos aceitos: `.mp3`, `.ogg` ou `.wav`; recomendado até 3 s e 200 KB por arquivo.
 - Origem e licença de cada arquivo colocado nos slots ficam registradas na seção de créditos do README (RNF-010).
 
+## 9.2 Sinais ao parceiro (RN-027)
+
+- O motor tem a ação `SINALIZAR {sinal}` (`src/engine/sinais.ts`): até 3 sinais distintos por participante e por mão, fora da vez inclusive, proibidos na mão de ferro. O sinal não muda vez nem valor.
+- Sigilo: `visaoDoAssento` só mostra os sinais da própria dupla, e `eventosParaAssento` descarta o evento `SINAL_ENVIADO` para a outra dupla — no servidor e também na partida contra bots.
+- Bots (`src/bots/sinais.ts`) sinalizam, logo depois da distribuição, as duas melhores cartas que têm sinal (ou "nada"). O fácil esquece metade das vezes. Ao decidir, leem os sinais do parceiro: somam força ao avaliar truco e, se o parceiro avisou zap ou copas e ainda vai jogar, guardam as cartas boas.
+- Online, o sinal humano não mexe no prazo, na pausa nem no ritmo dos bots.
+- Medido no simulador (2.000 partidas por confronto): a dupla de médios que troca sinais vence ≈ 60% contra a que não troca; nos difíceis, ≈ 57%. O peso do sinal no difícil (0,4) foi calibrado para ele continuar vencendo o médio (≈ 64%).
+
 ## 10. Plano de implementação por fases
 
 | Fase | Entrega | Pronto quando |
@@ -279,7 +279,7 @@ public/sons/
 | **3. Bots** | 3 níveis + simulador | 10.000 partidas simuladas sem ação inválida |
 | **4. Mesa offline + arte** | UC-001 a UC-004, UC-009 a UC-014, UC-016 | Partida completa contra bots no celular e no desktop |
 | **5. Marcador** | UC-017 a UC-020 | CTs do marcador aprovados |
-| **6. Online** | Supabase + `/api` + lobby; UC-005 a UC-008, UC-015 | 4 navegadores jogando uma partida até o fim |
+| **6. Online** | Servidor autoritativo + `/api` + lobby; UC-005 a UC-008, UC-014 a UC-016 | Navegadores diferentes jogando uma partida até o fim, com saída, reconexão e revanche |
 | **7. Polimento** | Sons, tutorial guiado, acessibilidade, e2e | RNF-003 a RNF-005 verificados |
 
 Cada fase vira uma branch e um PR; cada PR cita os IDs (RN/RF/UC/CT) que implementa, mantendo a rastreabilidade do documento até o código.

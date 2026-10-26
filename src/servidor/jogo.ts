@@ -144,17 +144,26 @@ export function avancar(sala: Sala, agora: Date, aleatorio: () => number = Math.
     }
     return false; // ninguém olhando: não adianta jogar sozinho
   }
+  const anfitriaoAntes = sala.anfitriao;
   if (!presente(sala.assentos[sala.anfitriao] ?? null, agora)) transferirAnfitriao(sala, agora);
-  if (partida.fase !== 'jogando') return false;
+  const trocouAnfitriao = sala.anfitriao !== anfitriaoAntes;
+  if (partida.fase !== 'jogando') return trocouAnfitriao;
 
   const vez = assentoDaVez(partida);
-  if (vez === undefined) return false;
+  if (vez === undefined) return trocouAnfitriao;
   const ocupante = sala.assentos[vez] ?? null;
   const porBot = controladoPorBot(ocupante, agora);
+  if (!porBot && !sala.prazo) {
+    // Humano na vez sem prazo: ele voltou (UC-015) ou reapareceu depois que a vez dele começou.
+    // Sem isso, se ele não jogar, a mesa fica parada para sempre (RN-021).
+    const decidir = partida.mao.pedido || partida.mao.decisaoOnze ? PRAZO.decisao : PRAZO.jogada;
+    sala.prazo = mais(agora, decidir);
+    return true;
+  }
   const liberado = porBot
     ? !sala.proximoBotEm || agora >= new Date(sala.proximoBotEm)
     : !!sala.prazo && agora >= new Date(sala.prazo);
-  if (!liberado) return false;
+  if (!liberado) return trocouAnfitriao;
 
   const nivel = ocupante?.tipo === 'bot' ? (ocupante.dificuldade ?? 'medio') : 'medio';
   const decisao = decidirBot(visaoDoAssento(partida, vez), nivel, aleatorio);

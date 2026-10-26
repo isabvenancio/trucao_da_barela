@@ -318,6 +318,36 @@ describe('UC-014 e UC-015 - Sair e reconectar', () => {
   });
 });
 
+describe('RN-021 + UC-015 - Volta na própria vez', () => {
+  it('quem reconecta na própria vez ganha prazo; se não jogar, o bot joga por ele e a mesa não trava', async () => {
+    const m = await partidaComDoisHumanos();
+    await m.s.sair(m.carol.codigo, m.carol.token);
+    // Só o Barela joga; o bot joga pela Carol até ser a vez dela.
+    let sala = await m.sala(m.barela.codigo);
+    for (let i = 0; i < 300 && !(sala.partida!.mao.vez === 1 && !sala.partida!.mao.pedido && !sala.partida!.mao.decisaoOnze); i++) {
+      m.avancar(1000);
+      const r = await m.s.estado(m.barela.codigo, m.barela.token, -1);
+      const a = r.visao!.acoes.find((x) => x.tipo !== 'PEDIR_TRUCO');
+      if (a && !r.destaque) await m.s.acao(m.barela.codigo, m.barela.token, a);
+      sala = await m.sala(m.barela.codigo);
+    }
+    expect(sala.partida!.mao.vez).toBe(1);
+    const cartas = sala.partida!.mao.cartas[1].length;
+    await m.s.entrar(m.carol.codigo, CAROL, m.carol.token);
+    const r = await m.s.estado(m.carol.codigo, m.carol.token, -1);
+    expect(r.prazo).toBeDefined();
+    for (let t = 0; t < 40; t++) {
+      m.avancar(1000);
+      await m.s.estado(m.barela.codigo, m.barela.token, -1);
+      await m.s.estado(m.carol.codigo, m.carol.token, -1);
+    }
+    sala = await m.sala(m.barela.codigo);
+    const jogou = sala.partida!.mao.cartas[1].length < cartas || sala.partida!.mao.vez !== 1;
+    expect(jogou).toBe(true);
+    expect(sala.assentos[1]!.saiu).toBeUndefined();
+  });
+});
+
 describe('UC-016 - Revanche', () => {
   it('só o anfitrião inicia; mesmas duplas, placar zerado; quem saiu vira bot', async () => {
     const m = await partidaComDoisHumanos();

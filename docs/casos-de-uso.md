@@ -1,8 +1,8 @@
 # Trucão da Barela — Casos de uso
 
 > Análise e Projeto de Software · Prof. Dr. João Choma · Situação: **Proposto**
-> **20 especificações completas**: objetivos, atores, fluxos, alternativas, exceções, pós-condições e cenários propostos de aceite — **45 critérios de aceite** e **45 cenários de teste**.
-> Documentos relacionados: [00 — Plano](00-plano-arquitetura-implementacao.md) · [01 — Regras de negócio](01-regras-de-negocio.md) · [02 — Requisitos](02-requisitos.md)
+> **21 especificações completas**: objetivos, atores, fluxos, alternativas, exceções, pós-condições e cenários propostos de aceite — **48 critérios de aceite** e **48 cenários de teste**.
+> Documentos relacionados: [00 — Plano](plano-arquitetura-implementacao.md) · [01 — Regras de negócio](regras-de-negocio.md) · [02 — Requisitos](requisitos.md)
 
 ## Sumário
 
@@ -11,7 +11,7 @@
 | Perfil e ajuda | [UC-001](#uc-001---configurar-perfil-de-jogador) Configurar perfil de jogador · [UC-002](#uc-002---configurar-preferências) Configurar preferências · [UC-003](#uc-003---consultar-regras-e-tutorial) Consultar regras e tutorial |
 | Partida contra bots | [UC-004](#uc-004---iniciar-partida-contra-bots) Iniciar partida contra bots |
 | Sala online | [UC-005](#uc-005---criar-sala-online) Criar sala online · [UC-006](#uc-006---entrar-em-sala-online) Entrar em sala online · [UC-007](#uc-007---organizar-duplas-da-sala) Organizar duplas da sala · [UC-008](#uc-008---iniciar-partida-online) Iniciar partida online |
-| Mesa de jogo | [UC-009](#uc-009---distribuir-mão) Distribuir mão · [UC-010](#uc-010---jogar-carta) Jogar carta · [UC-011](#uc-011---pedir-truco) Pedir truco · [UC-012](#uc-012---responder-pedido-de-truco) Responder pedido de truco · [UC-013](#uc-013---decidir-mão-de-onze) Decidir mão de onze · [UC-014](#uc-014---sair-da-partida) Sair da partida · [UC-015](#uc-015---reconectar-à-partida-online) Reconectar à partida online · [UC-016](#uc-016---encerrar-partida-e-jogar-revanche) Encerrar partida e jogar revanche |
+| Mesa de jogo | [UC-009](#uc-009---distribuir-mão) Distribuir mão · [UC-010](#uc-010---jogar-carta) Jogar carta · [UC-011](#uc-011---pedir-truco) Pedir truco · [UC-012](#uc-012---responder-pedido-de-truco) Responder pedido de truco · [UC-013](#uc-013---decidir-mão-de-onze) Decidir mão de onze · [UC-014](#uc-014---sair-da-partida) Sair da partida · [UC-015](#uc-015---reconectar-à-partida-online) Reconectar à partida online · [UC-016](#uc-016---encerrar-partida-e-jogar-revanche) Encerrar partida e jogar revanche · [UC-021](#uc-021---enviar-sinal-ao-parceiro) Enviar sinal ao parceiro |
 | Marcador físico | [UC-017](#uc-017---iniciar-marcador-de-pontos) Iniciar marcador de pontos · [UC-018](#uc-018---registrar-pontos-no-marcador) Registrar pontos no marcador · [UC-019](#uc-019---desfazer-registro-no-marcador) Desfazer registro no marcador · [UC-020](#uc-020---consultar-histórico-do-marcador) Consultar histórico do marcador |
 | Validação | [Checklist de validação documental](#checklist-de-validação-documental) · [Matriz de rastreabilidade](#matriz-de-rastreabilidade) |
 
@@ -19,7 +19,7 @@
 
 O Trucão da Barela é um jogo web de truco paulista para duas duplas, com partidas contra bots, partidas online em salas por código e um marcador de pontos para jogos com baralho físico.
 
-**Origem:** proposta do grupo; regras em [01-regras-de-negocio.md](01-regras-de-negocio.md); requisitos em [02-requisitos.md](02-requisitos.md). Limites e escolhas adicionais são propostas da análise, não atribuídas a entrevistas, aprovação formal ou testes executados.
+**Origem:** proposta do grupo; regras em [regras-de-negocio.md](regras-de-negocio.md); requisitos em [requisitos.md](requisitos.md). Limites e escolhas adicionais são propostas da análise, não atribuídas a entrevistas, aprovação formal ou testes executados.
 
 **Convenções:** os casos de uso descrevem comportamento, não interface. “Sistema” é o Trucão da Barela (navegador e servidor). Bots não são atores: são participantes controlados pelo sistema (RF-021) e executam os mesmos casos de mesa sob as mesmas regras. Quando um passo diz “o participante da vez”, vale para humano ou bot. CA é critério de aceite; CT é cenário de teste proposto. Nenhum teste é declarado executado.
 
@@ -61,11 +61,12 @@ flowchart LR
     UC018((UC-018 Registrar pontos))
     UC019((UC-019 Desfazer registro))
     UC020((UC-020 Histórico do marcador))
+    UC021((UC-021 Enviar sinal ao parceiro))
   end
 
   J --- UC001 & UC002 & UC003 & UC004 & UC005 & UC006 & UC007
   J --- UC010 & UC011 & UC012 & UC013 & UC014 & UC015 & UC016
-  J --- UC017 & UC018 & UC019 & UC020
+  J --- UC017 & UC018 & UC019 & UC020 & UC021
   A --- UC007 & UC008 & UC016
   UC005 & UC006 & UC007 & UC008 & UC015 --- RT
 
@@ -75,6 +76,7 @@ flowchart LR
   UC013 -. extend .-> UC009
   UC012 -. extend .-> UC011
   UC015 -. extend .-> UC006
+  UC021 -. extend .-> UC009
 ```
 
 | Relação | Significado |
@@ -83,6 +85,7 @@ flowchart LR
 | UC-013 **estende** UC-009 | Só ocorre quando uma dupla tem 11 pontos após a distribuição. |
 | UC-012 **estende** UC-011 | A resposta só existe após um pedido. |
 | UC-015 **estende** UC-006 | Entrar com credencial de assento existente de partida em andamento é uma reconexão. |
+| UC-021 **estende** UC-009 | Os sinais acontecem durante uma mão distribuída, por escolha do jogador. |
 
 ---
 
@@ -912,6 +915,52 @@ flowchart LR
 
 ---
 
+## UC-021 - Enviar sinal ao parceiro
+
+- **Objetivo:** avisar o parceiro sobre as próprias cartas ou intenção, sem que os adversários saibam.
+- **Ator principal:** Jogador.
+- **Atores secundários:** Serviço de tempo real (online).
+- **Gatilho:** o jogador decide fazer um sinal durante a mão.
+- **Precondições:** mão em andamento que não seja de ferro; o jogador tem pelo menos uma carta na mão e fez menos de 3 sinais nesta mão.
+- **Entradas:** sinal (RN-027).
+- **Prioridade / status:** Média / Proposto.
+- **Observação de numeração:** os critérios e cenários usam o número do requisito (CA-024 e CT-024), como nos demais casos.
+
+**Fluxo principal**
+
+1. O jogador solicita fazer um sinal.
+2. O sistema apresenta os sinais ainda disponíveis para ele nesta mão, com o gesto e o significado de cada um.
+3. O jogador escolhe um sinal.
+4. O sistema valida o sinal (RN-027) e o registra na mão, sem mudar a vez nem o valor da mão.
+5. O sistema apresenta o sinal ao parceiro, junto ao assento de quem sinalizou, e o mantém visível para ele até o fim da mão.
+
+**Fluxos alternativos**
+
+- **A1 - Parceiro é bot** (origem: passo 5): o bot passa a considerar o sinal nas decisões seguintes da mão (RN-019, RF-021).
+- **A2 - Receber sinal do parceiro** (origem: passo 1): quando o parceiro sinaliza, o sistema apresenta o sinal ao jogador (passo 5 do ponto de vista dele). Bots parceiros sinalizam as próprias cartas no início da mão.
+- **A3 - Desistir** (origem: passo 3): o jogador fecha a lista sem escolher; nada é registrado.
+
+**Exceções**
+
+- **E1 - Sinal não permitido** (origem: passo 4): sinal repetido, limite de 3 atingido, mão de ferro, mão encerrada ou sem cartas na mão. O sistema recusa sem alterar a mão.
+
+**Pós-condições**
+
+- Sucesso: sinal registrado e visível só para a dupla de quem sinalizou.
+- Falha/cancelamento: nenhum sinal registrado.
+
+**Rastreabilidade e verificação**
+
+- RF-024, RF-021, RF-022. Regras: RN-018, RN-019, RN-027.
+- CA-024.1: o sinal enviado aparece para o parceiro e não chega de nenhuma forma à dupla adversária.
+- CT-024.1: online, o assento 0 sinaliza Zap. Esperado: o assento 2 vê “Zap” junto ao avatar do parceiro; as respostas do servidor para os assentos 1 e 3 não contêm o sinal nem o evento.
+- CA-024.2: o sinal não muda a vez nem o valor da mão, e são aceitos no máximo 3 sinais distintos por participante na mão; na mão de ferro não há sinais.
+- CT-024.2: na vez do assento 1, o assento 0 sinaliza Três, Dois e Nada; um quarto sinal e um Três repetido são recusados; a vez continua com o assento 1. Com placar 11×11, sinalizar é recusado.
+- CA-024.3: o bot parceiro sinaliza as próprias cartas no início da mão e considera os sinais recebidos nas decisões de truco.
+- CT-024.3: bot parceiro com o zap. Esperado: sinal “Zap” logo após a distribuição. Em simulação bot × bot, a dupla que troca sinais vence a que não troca em mais da metade das partidas.
+
+---
+
 ## Checklist de validação documental
 
 Revisão pelas dimensões apresentadas em aula (correção, completude, consistência, rastreabilidade).
@@ -924,11 +973,11 @@ Revisão pelas dimensões apresentadas em aula (correção, completude, consist�
 | Passos descrevem comportamento (“o sistema valida…”), não elementos de interface | ✅ |
 | Todo UC aponta ao menos um RF e as RNs aplicáveis | ✅ (UC-002 sem RN, justificado) |
 | Toda RN aparece em pelo menos um UC ou RF | ✅ (ver matriz) |
-| Todo CA tem ao menos um CT com dados concretos e resultado esperado | ✅ 45 CA / 45 CT nos UCs, mais 5 CA / 5 CT de RF-021 e RF-022 em 02-requisitos.md |
+| Todo CA tem ao menos um CT com dados concretos e resultado esperado | ✅ 48 CA / 48 CT nos UCs, mais 7 CA / 7 CT de RF-021, RF-022 e RF-023 em requisitos.md |
 | Regras não são contraditas nos fluxos (ex.: truco bloqueado na mão de onze em RN-013, UC-011 E1 e UC-013 passo 3) | ✅ |
 | Relações include/extend coerentes com os fluxos | ✅ |
 | Bots não aparecem como atores e seguem as mesmas validações | ✅ (RF-021) |
-| Decisões de variação regional explícitas | ✅ RN-007, RN-014, RN-015, RN-021 |
+| Decisões de variação regional explícitas | ✅ RN-007, RN-014, RN-015, RN-021, RN-027 |
 | Execução de testes de software | ⏳ Não executada — depende da implementação |
 
 ## Matriz de rastreabilidade
@@ -955,8 +1004,10 @@ Revisão pelas dimensões apresentadas em aula (correção, completude, consist�
 | UC-018 | RF-018 | RN-024 | 018.1–018.2 |
 | UC-019 | RF-019 | RN-024, RN-025 | 019.1–019.2 |
 | UC-020 | RF-020 | RN-025 | 020.1–020.2 |
-| — | RF-021 | RN-018, RN-019, RN-021, RN-022 | 021.1–021.3 |
+| UC-021 | RF-024, RF-021, RF-022 | RN-018, RN-019, RN-027 | 024.1–024.3 |
+| — | RF-021 | RN-018, RN-019, RN-021, RN-022, RN-027 | 021.1–021.3 |
 | — | RF-022 | RN-003, RN-018 | 022.1–022.2 |
+| — | RF-023 | — | 023.1–023.2 |
 
 ## Referências e critérios da disciplina
 

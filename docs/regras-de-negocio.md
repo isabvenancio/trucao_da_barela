@@ -1,8 +1,8 @@
 # Trucão da Barela — Regras de negócio
 
 > Análise e Projeto de Software · Prof. Dr. João Choma · Situação: **Proposto**
-> **26 regras de negócio**, com condição, dados, exceções, justificativa, tipo, interessados e vínculos aos requisitos e casos de uso.
-> Documentos relacionados: [00 — Plano](00-plano-arquitetura-implementacao.md) · [02 — Requisitos](02-requisitos.md) · [03 — Casos de uso](03-casos-de-uso.md)
+> **27 regras de negócio**, com condição, dados, exceções, justificativa, tipo, interessados e vínculos aos requisitos e casos de uso.
+> Documentos relacionados: [00 — Plano](plano-arquitetura-implementacao.md) · [02 — Requisitos](requisitos.md) · [03 — Casos de uso](casos-de-uso.md)
 
 ## Sumário
 
@@ -34,6 +34,7 @@
 | [RN-024](#rn-024---pontuação-no-marcador-físico) | Pontuação no marcador físico | Cálculo / workflow |
 | [RN-025](#rn-025---histórico-local-do-marcador) | Histórico local do marcador | Privacidade |
 | [RN-026](#rn-026---revanche) | Revanche | Workflow |
+| [RN-027](#rn-027---sinais-ao-parceiro) | Sinais ao parceiro | Restrição / proteção do negócio |
 
 ## Contexto, origem e premissas
 
@@ -366,7 +367,7 @@ Ao fim de cada mão, a dupla vencedora soma o valor da mão. Vence a partida a p
 
 ## RN-018 - Sigilo das cartas
 
-Cada participante conhece apenas: as próprias cartas, a vira, as cartas **abertas** já jogadas e o placar. Cartas encobertas e as cartas na mão dos outros nunca são reveladas. A única exceção é a mão de onze, em que os parceiros da dupla com 11 veem as cartas um do outro.
+Cada participante conhece apenas: as próprias cartas, a vira, as cartas **abertas** já jogadas, o placar e os **sinais do próprio parceiro** (RN-027). Cartas encobertas, as cartas na mão dos outros e os sinais trocados pela dupla adversária nunca são revelados. A única exceção é a mão de onze, em que os parceiros da dupla com 11 veem as cartas um do outro.
 
 | Campo | Descrição |
 |---|---|
@@ -378,12 +379,12 @@ Cada participante conhece apenas: as próprias cartas, a vira, as cartas **abert
 | Interessados | Jogador, Anfitrião, Equipe de desenvolvimento |
 | Prioridade / status | Alta / Proposto |
 | Origem | Regras tradicionais; aplicação técnica é proposta da análise (RNF-002). |
-| Requisitos e casos | RF-021, RF-022; UC-009, UC-010, UC-013 |
+| Requisitos e casos | RF-021, RF-022, RF-024; UC-009, UC-010, UC-013, UC-021 |
 | Verificação proposta | Inspecionar a visão entregue ao assento 1 e confirmar ausência das cartas dos assentos 0, 2 e 3 e das encobertas. |
 
 ## RN-019 - Bots sem informação privilegiada
 
-Bots são participantes controlados pelo sistema e seguem **as mesmas regras** dos humanos. Decidem usando somente a informação permitida ao seu assento (RN-018). Há três níveis: **fácil**, **médio** e **difícil**. Bots não recebem cartas melhores nem conhecem o monte.
+Bots são participantes controlados pelo sistema e seguem **as mesmas regras** dos humanos. Decidem usando somente a informação permitida ao seu assento (RN-018) — o que inclui os sinais recebidos do parceiro (RN-027). Bots também enviam sinais ao parceiro, de acordo com as próprias cartas. Há três níveis: **fácil**, **médio** e **difícil**. Bots não recebem cartas melhores nem conhecem o monte.
 
 | Campo | Descrição |
 |---|---|
@@ -395,7 +396,7 @@ Bots são participantes controlados pelo sistema e seguem **as mesmas regras** d
 | Interessados | Jogador, Anfitrião |
 | Prioridade / status | Alta / Proposto |
 | Origem | Proposta do grupo (requisito de jogar com bots). |
-| Requisitos e casos | RF-004, RF-007, RF-021; UC-004, UC-007 |
+| Requisitos e casos | RF-004, RF-007, RF-021, RF-024; UC-004, UC-007, UC-021 |
 | Verificação proposta | Verificar que a função de decisão do bot recebe apenas a visão do assento; simular 10.000 partidas sem nenhuma ação inválida. |
 
 ## RN-020 - Formação e início da sala online
@@ -518,6 +519,43 @@ Ao fim da partida, uma revanche pode ser iniciada **mantendo as duplas** e zeran
 | Verificação proposta | Após vitória, iniciar revanche e conferir placar 0×0 e mesmas duplas. |
 
 ---
+
+## RN-027 - Sinais ao parceiro
+
+Durante a mão, cada participante pode fazer **sinais** para o parceiro, imitando os gestos do truco presencial, para indicar as cartas que tem ou o que pretende. Os sinais adotados são:
+
+| Sinal | Gesto (ilustração no jogo) | Significado |
+|---|---|---|
+| Zap | Piscar o olho | Tenho a manilha de paus |
+| Copas | Levantar as sobrancelhas | Tenho a manilha de copas |
+| Espadilha | Mostrar a língua | Tenho a manilha de espadas |
+| Picafumo | Encher as bochechas | Tenho a manilha de ouros |
+| Três | Morder o lábio | Tenho um 3 |
+| Dois | Fazer biquinho | Tenho um 2 |
+| Ás | Abrir a boca | Tenho um ás |
+| Nada | Fechar os olhos | Não tenho carta boa |
+| Pede truco | Sorrir | Pode pedir truco |
+
+Regras:
+
+1. Pode sinalizar quem ainda tem carta na mão, a qualquer momento da mão, mesmo fora da sua vez. O sinal não muda a vez nem o valor da mão.
+2. Cada participante faz no máximo **3 sinais por mão**, sem repetir o mesmo sinal.
+3. O sinal é visto **só pelo parceiro** (e por quem o fez). A dupla adversária não vê o sinal nem fica sabendo que ele aconteceu (**proposta da análise**; no jogo presencial, “pegar o sinal” do adversário faz parte do jogo).
+4. Não há sinais na **mão de ferro**, porque ninguém conhece as próprias cartas (RN-016).
+5. O sistema não confere se o sinal é verdadeiro.
+
+| Campo | Descrição |
+|---|---|
+| Condição | Durante uma mão em andamento, por participante com carta na mão. |
+| Dados envolvidos | Sinal; participante; mão; sinais já feitos na mão. |
+| Exceções / alternativas | Sinal repetido, quarto sinal, mão de ferro, mão encerrada ou participante sem cartas: recusado sem efeito. |
+| Justificativa | Reproduz a comunicação entre parceiros, parte tradicional do truco, que se perde no jogo digital; os jogos de truco online oferecem esse recurso. |
+| Tipo | Restrição / proteção do negócio (sigilo) |
+| Interessados | Jogador |
+| Prioridade / status | Média / Proposto |
+| Origem | Proposta do grupo; gestos e limites são propostas da análise. |
+| Requisitos e casos | RF-024, RF-021, RF-022; UC-021 |
+| Verificação proposta | Assento 0 sinaliza Zap: o assento 2 recebe o sinal, os assentos 1 e 3 não recebem nada; um quarto sinal na mesma mão é recusado; na mão de ferro o sinal é recusado. |
 
 ## Referências e critérios da disciplina
 

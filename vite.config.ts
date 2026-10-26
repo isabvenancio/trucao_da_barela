@@ -1,6 +1,6 @@
 /// <reference types="vitest/config" />
 import type { IncomingMessage, ServerResponse } from 'node:http';
-import { defineConfig } from 'vite';
+import { defineConfig, loadEnv } from 'vite';
 import type { Plugin, ViteDevServer } from 'vite';
 import react from '@vitejs/plugin-react';
 
@@ -12,6 +12,17 @@ function apiLocal(): Plugin {
   return {
     name: 'trucao-api-local',
     configureServer(server: ViteDevServer) {
+      // O Vite só expõe ao navegador variáveis VITE_*; as do servidor precisam ir para process.env.
+      const env = loadEnv(server.config.mode, process.cwd(), '');
+      for (const chave of ['SUPABASE_URL', 'SUPABASE_SERVICE_ROLE_KEY']) {
+        if (env[chave] && !process.env[chave]) process.env[chave] = env[chave];
+      }
+      const noSupabase = !!(process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY);
+      server.httpServer?.once('listening', () => {
+        server.config.logger.info(
+          noSupabase ? '  Online: salas no Supabase (.env.local)' : '  Online: salas em memória (sem .env.local do Supabase)',
+        );
+      });
       server.middlewares.use(async (req: IncomingMessage, res: ServerResponse, next: () => void) => {
         if (!req.url?.startsWith('/api/')) return next();
         const { tratar, rotaDoCaminho } = (await server.ssrLoadModule('/src/servidor/http.ts')) as {

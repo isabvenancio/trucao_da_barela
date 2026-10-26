@@ -1171,14 +1171,21 @@ function avancar(sala, agora, aleatorio = Math.random) {
     }
     return false;
   }
+  const anfitriaoAntes = sala.anfitriao;
   if (!presente(sala.assentos[sala.anfitriao] ?? null, agora)) transferirAnfitriao(sala, agora);
-  if (partida.fase !== "jogando") return false;
+  const trocouAnfitriao = sala.anfitriao !== anfitriaoAntes;
+  if (partida.fase !== "jogando") return trocouAnfitriao;
   const vez = assentoDaVez(partida);
-  if (vez === void 0) return false;
+  if (vez === void 0) return trocouAnfitriao;
   const ocupante = sala.assentos[vez] ?? null;
   const porBot = controladoPorBot(ocupante, agora);
+  if (!porBot && !sala.prazo) {
+    const decidir = partida.mao.pedido || partida.mao.decisaoOnze ? PRAZO.decisao : PRAZO.jogada;
+    sala.prazo = mais2(agora, decidir);
+    return true;
+  }
   const liberado = porBot ? !sala.proximoBotEm || agora >= new Date(sala.proximoBotEm) : !!sala.prazo && agora >= new Date(sala.prazo);
-  if (!liberado) return false;
+  if (!liberado) return trocouAnfitriao;
   const nivel = ocupante?.tipo === "bot" ? ocupante.dificuldade ?? "medio" : "medio";
   const decisao = decidirBot(visaoDoAssento(partida, vez), nivel, aleatorio);
   if (!decisao) return false;

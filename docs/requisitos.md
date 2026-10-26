@@ -1,8 +1,8 @@
 # Trucão da Barela — Requisitos
 
 > Análise e Projeto de Software · Prof. Dr. João Choma · Situação: **Proposto**
-> **22 requisitos funcionais** e **10 requisitos não funcionais**, com origem, vínculos e plano de verificação.
-> Documentos relacionados: [00 — Plano](00-plano-arquitetura-implementacao.md) · [01 — Regras de negócio](01-regras-de-negocio.md) · [03 — Casos de uso](03-casos-de-uso.md)
+> **24 requisitos funcionais** e **10 requisitos não funcionais**, com origem, vínculos e plano de verificação.
+> Documentos relacionados: [00 — Plano](plano-arquitetura-implementacao.md) · [01 — Regras de negócio](regras-de-negocio.md) · [03 — Casos de uso](casos-de-uso.md)
 
 ## Sumário
 
@@ -32,6 +32,8 @@
 | [RF-020](#rf-020---consultar-histórico-do-marcador) | Consultar histórico do marcador | Baixa | UC-020 |
 | [RF-021](#rf-021---controlar-participantes-bot) | Controlar participantes bot | Alta | UC-004, UC-010 a UC-015 |
 | [RF-022](#rf-022---apresentar-estado-da-mesa) | Apresentar estado da mesa | Alta | UC-009 a UC-013 |
+| [RF-023](#rf-023---reproduzir-efeitos-sonoros) | Reproduzir efeitos sonoros | Baixa | UC-002, UC-009 a UC-013, UC-016 |
+| [RF-024](#rf-024---enviar-sinal-ao-parceiro) | Enviar sinal ao parceiro | Média | UC-021 |
 
 **Não funcionais**
 
@@ -52,11 +54,11 @@
 
 O Trucão da Barela é um jogo web de truco paulista para duas duplas, com partidas contra bots, partidas online em salas por código e um marcador de pontos para jogos com baralho físico, com identidade visual em estilo de blocos/pixel art.
 
-**Origem:** proposta do grupo e regras do domínio documentadas em [01-regras-de-negocio.md](01-regras-de-negocio.md). Limites numéricos e escolhas técnicas são propostas da análise; não derivam de entrevistas, aprovação formal de usuários ou testes executados.
+**Origem:** proposta do grupo e regras do domínio documentadas em [regras-de-negocio.md](regras-de-negocio.md). Limites numéricos e escolhas técnicas são propostas da análise; não derivam de entrevistas, aprovação formal de usuários ou testes executados.
 
 **Premissas propostas:** sem conta de usuário; partida contra bots no navegador; partida online validada no servidor (Vercel Functions + Supabase); marcador apenas no dispositivo. Ranking, chat livre, apostas e pagamentos estão fora do escopo.
 
-As fichas funcionais sintetizam o objetivo e apontam o caso de uso que detalha processamento, alternativas, exceções e cenários de aceite. RF-021 e RF-022 são requisitos transversais, sem caso de uso próprio, e descrevem o processamento na própria ficha. Nenhum teste de software é declarado executado.
+As fichas funcionais sintetizam o objetivo e apontam o caso de uso que detalha processamento, alternativas, exceções e cenários de aceite. RF-021, RF-022 e RF-023 são requisitos transversais, sem caso de uso próprio, e descrevem o processamento na própria ficha. Nenhum teste de software é declarado executado.
 
 ## Atores, dados e relações
 
@@ -76,6 +78,7 @@ As fichas funcionais sintetizam o objetivo e apontam o caso de uso que detalha p
 | Mão | Cartas de cada participante, vira, manilha, valor vigente, tipo (normal, de onze, de ferro), rodadas e pedido pendente. |
 | Rodada | Cartas jogadas (abertas ou encobertas), quem iniciou e resultado (dupla vencedora ou empate). |
 | Pedido de truco | Dupla solicitante, valor pedido, respondente e resposta. |
+| Sinal | Participante, tipo do sinal (RN-027) e mão em que foi feito; visível só ao parceiro. |
 | Evento | Fato ocorrido na mesa (carta jogada, truco pedido, rodada vencida...) usado para apresentar e animar a mesa. |
 | Partida do marcador | Nomes das duplas, registros, totais, situação e data (RN-024, RN-025). |
 | Registro do marcador | Dupla, valor somado (1, 3, 6, 9 ou 12) e instante. |
@@ -90,9 +93,10 @@ As fichas funcionais sintetizam o objetivo e apontam o caso de uso que detalha p
 | Mão / Rodada | Uma mão possui de 1 a 3 rodadas (pode terminar antes por correr). |
 | Rodada / Carta jogada | Uma rodada possui de 1 a 4 cartas jogadas; cada carta é jogada uma vez por mão. |
 | Mão / Pedido de truco | Uma mão possui zero a quatro pedidos (3, 6, 9, 12). |
+| Mão / Sinal | Uma mão possui zero a doze sinais (no máximo três por participante). |
 | Partida do marcador / Registro | Uma partida do marcador possui zero ou muitos registros. |
 
-Estas relações derivam das regras e dos fluxos atuais; o modelo físico proposto está no [plano de arquitetura](00-plano-arquitetura-implementacao.md#7-modelo-de-dados-online).
+Estas relações derivam das regras e dos fluxos atuais; o modelo físico proposto está no [plano de arquitetura](plano-arquitetura-implementacao.md#7-modelo-de-dados-online).
 
 ---
 
@@ -488,10 +492,10 @@ O sistema deve decidir as ações dos participantes bot — jogar carta, pedir e
 | Origem | Proposta do grupo (jogar com bots); RN-019, RN-021, RN-022. |
 | Precondições | Vez ou decisão pendente de um assento controlado por bot. |
 | Entradas | Visão do assento (RN-018); nível; ações válidas. |
-| Processamento | 1. O sistema identifica que a decisão corrente pertence a um bot ou a um humano com prazo expirado/desconectado. 2. O sistema obtém a visão do assento e a lista de ações válidas. 3. A estratégia do nível escolhe uma ação válida. 4. O sistema aplica a ação pelas mesmas validações dos humanos (UC-010 a UC-013). 5. O sistema registra o evento indicando ação de bot e o apresenta com o ritmo das preferências. |
+| Processamento | 0. Ao distribuir a mão, cada bot envia ao parceiro sinais coerentes com as próprias cartas (RN-027). 1. O sistema identifica que a decisão corrente pertence a um bot ou a um humano com prazo expirado/desconectado. 2. O sistema obtém a visão do assento — incluindo os sinais do parceiro — e a lista de ações válidas. 3. A estratégia do nível escolhe uma ação válida. 4. O sistema aplica a ação pelas mesmas validações dos humanos (UC-010 a UC-013). 5. O sistema registra o evento indicando ação de bot e o apresenta com o ritmo das preferências. |
 | Saídas / pós-condições | Ação válida aplicada; partida prossegue. |
 | Alternativas / exceções | Se a estratégia devolver ação inválida, aplica-se a primeira ação válida (carta de menor força aberta, ou correr) e o erro é registrado para correção. |
-| Regras relacionadas | RN-018, RN-019, RN-021, RN-022 |
+| Regras relacionadas | RN-018, RN-019, RN-021, RN-022, RN-027 |
 | Casos e testes | UC-004, UC-010 a UC-015; CT-021.1, CT-021.2, CT-021.3 |
 | Critérios de aceite | CA-021.1: a decisão do bot recebe somente a visão do seu assento. CA-021.2: em 1.000 partidas simuladas, bots difíceis vencem bots fáceis em pelo menos 60% e nenhuma ação inválida é aplicada. CA-021.3: o bot assume a decisão de humano com prazo expirado ou desconectado e devolve o controle na reconexão. |
 | Cenários de teste | CT-021.1: chamar a decisão do bot do assento 1 e inspecionar a entrada; esperado: sem cartas dos assentos 0, 2 e 3. CT-021.2: simular 1.000 partidas Difícil × Fácil com sementes fixas; esperado: taxa ≥ 60% e zero ações inválidas. CT-021.3: expirar o prazo de jogada do assento 2 online; esperado: jogada válida automática e controle humano mantido na decisão seguinte. |
@@ -516,6 +520,45 @@ O sistema deve apresentar a cada participante a mesa a partir do seu assento: su
 | Critérios de aceite | CA-022.1: a mesa apresenta placar, valor da mão, vira, manilha, participante da vez e cartas abertas. CA-022.2: cada evento (truco, vencedor da rodada, fim da mão) é anunciado visualmente e em texto acessível. |
 | Cenários de teste | CT-022.1: com vira 6 e um 7 na mão do jogador; esperado: 7 destacado como manilha e “Manilha: 7” visível. CT-022.2: pedido de truco do adversário; esperado: anúncio visual e região de leitura de tela com “Truco! Valendo 3”. |
 
+## RF-023 - Reproduzir efeitos sonoros
+
+O sistema deve tocar um efeito sonoro nos eventos importantes da mesa (distribuição, jogada, manilha, zap, carta encoberta, cada degrau do truco, aceitar, correr, rodada e mão ganhas, mão de onze, mão de ferro, vitória, derrota, sua vez, sinal do parceiro e entrada/saída na sala), usando o áudio configurado para o evento ou, na falta dele, um som sintetizado.
+
+| Campo | Descrição |
+|---|---|
+| Objetivo | Tornar a partida mais divertida e reforçar, pelo som, o que acabou de acontecer. |
+| Ator / interessado | Jogador |
+| Prioridade / status | Baixa / Proposto |
+| Origem | Proposta do grupo; plano de arquitetura, seção 9.1. |
+| Precondições | Som ligado nas preferências (UC-002). |
+| Entradas | Eventos da mesa; manifesto de sons (`public/sons/manifesto.json`); volume. |
+| Processamento | 1. O sistema carrega o manifesto e pré-carrega os arquivos indicados. 2. A cada lote de eventos, converte cada evento no seu slot de som, do ponto de vista da dupla do jogador. 3. Toca o arquivo do slot ou, se não houver arquivo ou ele falhar, o som sintetizado. 4. Aplica volume e liga/desliga das preferências. |
+| Saídas / pós-condições | Som tocado, sem bloquear a partida. |
+| Alternativas / exceções | Navegador sem áudio ou com reprodução bloqueada: a partida segue em silêncio. |
+| Regras relacionadas | — (a origem e a licença dos áudios seguem RNF-010) |
+| Casos e testes | UC-002, UC-009 a UC-013, UC-016; CT-023.1, CT-023.2 |
+| Critérios de aceite | CA-023.1: cada evento previsto toca o som do seu slot — cada degrau do truco e vitória/derrota têm sons distintos. CA-023.2: slot sem arquivo, ou com arquivo inválido, toca o som sintetizado de reserva. |
+| Cenários de teste | CT-023.1: eventos de truco 3, 6, 9 e 12; esperado: slots truco, seis, nove e doze (teste automatizado `src/ui/__tests__/sons.test.ts`). CT-023.2: manifesto com `"doze": null` e `"truco": "inexistente.mp3"`; esperado: os dois eventos tocam o som sintetizado. |
+
+## RF-024 - Enviar sinal ao parceiro
+
+O sistema deve permitir ao participante enviar ao parceiro um dos sinais da RN-027 e apresentar ao parceiro os sinais recebidos na mão, sem que a dupla adversária os veja.
+
+| Campo | Descrição |
+|---|---|
+| Objetivo | Combinar a jogada com o parceiro, como no truco presencial. |
+| Ator / interessado | Jogador |
+| Prioridade / status | Média / Proposto |
+| Origem | Proposta do grupo; UC-021. |
+| Precondições | Mão em andamento que não seja de ferro; o jogador tem carta na mão. |
+| Entradas | Sinal escolhido. |
+| Processamento | UC-021, Fluxo principal, passos 1–5. |
+| Saídas / pós-condições | Sinal registrado na mão e apresentado ao parceiro. |
+| Alternativas / exceções | Fluxos de UC-021. |
+| Regras relacionadas | RN-018, RN-019, RN-027 |
+| Casos e testes | UC-021; CT-024.1, CT-024.2, CT-024.3 |
+| Critérios de aceite | CA-024.1: o sinal enviado aparece para o parceiro e não chega de nenhuma forma à dupla adversária. CA-024.2: o sinal não muda a vez nem o valor da mão, e são aceitos no máximo 3 sinais distintos por participante na mão; na mão de ferro não há sinais. CA-024.3: o bot parceiro sinaliza as próprias cartas no início da mão e considera os sinais recebidos nas decisões de truco. |
+
 ---
 
 ## RNF-001 - Integridade das regras
@@ -528,7 +571,7 @@ Todas as regras de jogo devem ser aplicadas por **um único motor de regras**. O
 | Escopo | UC-004, UC-008 a UC-016; RF-021 |
 | Prioridade / status | Alta / Proposto |
 | Origem | Decisão de qualidade proposta para a análise. |
-| Rastreabilidade | RF-004, RF-008 a RF-016, RF-021; RN-001 a RN-018 |
+| Rastreabilidade | RF-004, RF-008 a RF-016, RF-021, RF-024; RN-001 a RN-018, RN-027 |
 | Verificação | VN-RNF-001 — Não executada: depende de implementação. **Método:** testes de integração enviando ações forjadas e simultâneas para `/api/partidas/acao`. **Aprovação:** 100% das ações inválidas recusadas sem alterar o estado; duas ações simultâneas para a mesma versão resultam em exatamente uma gravação. |
 
 ## RNF-002 - Segurança e sigilo
@@ -541,7 +584,7 @@ O navegador de cada participante deve receber **somente a visão do seu assento*
 | Escopo | UC-005 a UC-016 (online) |
 | Prioridade / status | Alta / Proposto |
 | Origem | Decisão de qualidade proposta; derivada de RN-018. |
-| Rastreabilidade | RF-005 a RF-015, RF-022; RN-018, RN-022 |
+| Rastreabilidade | RF-005 a RF-015, RF-022, RF-024; RN-018, RN-022, RN-027 |
 | Verificação | VN-RNF-002 — Não executada. **Método:** inspeção das respostas da API e do canal em tempo real com ferramenta de rede; tentativa de leitura direta das tabelas com a chave pública. **Aprovação:** nenhuma resposta contém cartas de outro assento ou encobertas; leitura direta recusada; token inválido recebe recusa. |
 
 ## RNF-003 - Desempenho
@@ -651,7 +694,7 @@ A ambientação, as cartas, os naipes e os avatares devem seguir um estilo de **
 | Escopo | UC-001, UC-003, UC-004, UC-009, UC-010 |
 | Prioridade / status | Média / Proposto |
 | Origem | Decisão de qualidade proposta. |
-| Rastreabilidade | RF-001, RF-003, RF-022 |
+| Rastreabilidade | RF-001, RF-003, RF-022, RF-023 |
 | Verificação | VN-RNF-010 — Não executada. **Método:** revisão da pasta `src/assets` e da seção de créditos do README. **Aprovação:** todo arquivo de arte é autoral ou tem licença registrada; nenhum elemento de marca de terceiros. |
 
 ---

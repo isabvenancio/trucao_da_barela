@@ -46,6 +46,8 @@ export function useSalaOnline(codigo: string, perfil: Perfil) {
   const ultimoOk = useRef(Date.now());
   const desvioRelogio = useRef(0);
   const avisouTempo = useRef<string | undefined>(undefined);
+  /** Última visão fora da pausa: base da mesa congelada quando a pausa já traz a mão nova. */
+  const visaoAntesDaPausa = useRef<VisaoMesa | undefined>(undefined);
 
   const processar = useCallback((r: RespostaEstado) => {
     const participantes = r.visao?.participantes;
@@ -68,6 +70,8 @@ export function useSalaOnline(codigo: string, perfil: Perfil) {
       }
     }
     primeira.current = false;
+    const emPausa = !!r.destaque && new Date(r.destaque.ate).getTime() > new Date(r.agora).getTime();
+    if (!emPausa && r.visao) visaoAntesDaPausa.current = r.visao;
     versao.current = Math.max(versao.current, r.versao);
     desvioRelogio.current = new Date(r.agora).getTime() - Date.now();
     setResposta(r);
@@ -171,7 +175,36 @@ export function useSalaOnline(codigo: string, perfil: Perfil) {
   }, [destaqueAtivo, resposta?.destaque, agoraServidor]);
 
   let visao: VisaoMesa | undefined = resposta?.visao;
-  if (visao && destaqueAtivo && resposta?.destaque) {
+  const anterior = visaoAntesDaPausa.current;
+  if (visao && destaqueAtivo && resposta?.destaque && anterior && anterior.numeroMao !== visao.numeroMao) {
+    // A mão acabou nesta rodada: mostra a mão que terminou (cartas, vira e valor antigos), não a nova.
+    const rodada = resposta.destaque.rodada;
+    const ultima = anterior.rodadas[anterior.rodadas.length - 1];
+    const jaNaMesa = new Set(ultima?.jogadas.map((j) => j.assento) ?? []);
+    const novas = rodada.jogadas.filter((j) => !jaNaMesa.has(j.assento));
+    const quantidade = [...anterior.quantidadeCartas] as VisaoMesa['quantidadeCartas'];
+    let minhas = anterior.minhasCartas;
+    for (const j of novas) {
+      quantidade[j.assento] = Math.max(0, quantidade[j.assento] - 1);
+      if (j.assento === anterior.assento) {
+        const i = minhas.findIndex((c) => c === null || (j.carta !== null && c.valor === j.carta.valor && c.naipe === j.carta.naipe));
+        if (i >= 0) minhas = minhas.filter((_, k) => k !== i);
+      }
+    }
+    visao = {
+      ...anterior,
+      placar: resposta.destaque.placar,
+      rodadas: [...anterior.rodadas.slice(0, -1), rodada],
+      minhasCartas: minhas,
+      quantidadeCartas: quantidade,
+      acoes: [],
+      aguardando: undefined,
+      pedido: undefined,
+      decisaoOnze: undefined,
+      cartasParceiro: undefined,
+      sinaisDisponiveis: [],
+    };
+  } else if (visao && destaqueAtivo && resposta?.destaque) {
     const atual = visao.rodadas[visao.rodadas.length - 1];
     const anteriores = atual && atual.jogadas.length === 0 ? visao.rodadas.slice(0, -1) : visao.rodadas;
     const mesmaMao = anteriores.length > 0;
