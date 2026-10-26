@@ -3,7 +3,7 @@ import { aplicarAcao, visaoDoAssento } from '../../engine/index.ts';
 import { mesa, ok } from '../../engine/__tests__/ajudantes.ts';
 import { forcaSinalizadaDoParceiro } from '../avaliacao.ts';
 import { decidirBot } from '../index.ts';
-import { aplicarSinaisDosBots, sinaisDoBot } from '../../engine/sinais.ts';
+import { aplicarSinaisDosBots, sinaisDoBot } from '../sinais.ts';
 import { simular } from '../simulador.ts';
 
 const fixo = () => 0.9;

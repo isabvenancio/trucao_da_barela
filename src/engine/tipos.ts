@@ -30,6 +30,15 @@ export type TipoMao = 'normal' | 'onze' | 'ferro';
 
 export type ValorPedido = 3 | 6 | 9 | 12;
 
+/** RN-027: sinais ao parceiro. */
+export type Sinal = 'zap' | 'copas' | 'espadilha' | 'picafumo' | 'tres' | 'dois' | 'as' | 'nada' | 'truca';
+
+export interface SinalFeito {
+  assento: Assento;
+  sinal: Sinal;
+  rodada: number;
+}
+
 export interface CartaJogada {
   assento: Assento;
   carta: Carta;
@@ -83,6 +92,8 @@ export interface EstadoMao {
   ultimaDuplaQuePediu?: Dupla;
   decisaoOnze?: DecisaoOnze;
   resultado?: ResultadoMao;
+  /** RN-027: sinais feitos nesta mão; a visão filtra pela dupla. */
+  sinais?: SinalFeito[];
 }
 
 export type FasePartida = 'jogando' | 'encerrada';
@@ -102,7 +113,8 @@ export type Acao =
   | { tipo: 'JOGAR_CARTA'; assento: Assento; indice: number; encoberta?: boolean }
   | { tipo: 'PEDIR_TRUCO'; assento: Assento }
   | { tipo: 'RESPONDER_TRUCO'; assento: Assento; resposta: 'aceitar' | 'correr' | 'aumentar' }
-  | { tipo: 'DECIDIR_MAO_DE_ONZE'; assento: Assento; decisao: 'jogar' | 'correr' };
+  | { tipo: 'DECIDIR_MAO_DE_ONZE'; assento: Assento; decisao: 'jogar' | 'correr' }
+  | { tipo: 'SINALIZAR'; assento: Assento; sinal: Sinal };
 
 export type Evento =
   | { tipo: 'MAO_DISTRIBUIDA'; numero: number; carteador: Assento; vira: Carta; manilha: Valor; tipoMao: TipoMao }
@@ -114,7 +126,8 @@ export type Evento =
   | { tipo: 'TRUCO_PEDIDO'; assento: Assento; dupla: Dupla; valor: ValorPedido; respondente: Assento }
   | { tipo: 'TRUCO_RESPONDIDO'; assento: Assento; resposta: 'aceitar' | 'correr' | 'aumentar'; valor: number }
   | { tipo: 'MAO_ENCERRADA'; vencedora: Dupla | null; pontos: number; motivo: MotivoFimMao; placar: [number, number] }
-  | { tipo: 'PARTIDA_ENCERRADA'; vencedora: Dupla; placar: [number, number] };
+  | { tipo: 'PARTIDA_ENCERRADA'; vencedora: Dupla; placar: [number, number] }
+  | { tipo: 'SINAL_ENVIADO'; assento: Assento; sinal: Sinal };
 
 export type CodigoErro =
   | 'PARTIDA_ENCERRADA'
@@ -127,7 +140,8 @@ export type CodigoErro =
   | 'NAO_E_RESPONDENTE'
   | 'AUMENTO_PROIBIDO'
   | 'SEM_DECISAO_ONZE'
-  | 'NAO_E_DECISOR';
+  | 'NAO_E_DECISOR'
+  | 'SINAL_PROIBIDO';
 
 export interface ErroRegra {
   codigo: CodigoErro;
